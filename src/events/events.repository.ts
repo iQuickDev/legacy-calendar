@@ -7,6 +7,23 @@ import { ParticipateDto } from './dto/participate.dto';
 export class EventsRepository {
     constructor(private readonly prisma: PrismaService) { }
 
+    private eventInclude() {
+        return {
+            host: { select: { id: true, username: true, profilePicture: true } },
+            participants: {
+                include: {
+                    user: { select: { id: true, username: true, profilePicture: true } },
+                }
+            },
+            rideAssignments: {
+                include: {
+                    driver: { select: { id: true, username: true, profilePicture: true } },
+                    passenger: { select: { id: true, username: true, profilePicture: true } },
+                }
+            }
+        };
+    }
+
     async create(data: Prisma.EventCreateInput): Promise<Event> {
         return this.prisma.event.create({ data });
     }
@@ -17,30 +34,14 @@ export class EventsRepository {
 
     async findAll(): Promise<Event[]> {
         return this.prisma.event.findMany({
-            include: {
-                host: { select: { id: true, username: true, profilePicture: true } },
-                participants: {
-                    include: { 
-                        user: { select: { id: true, username: true, profilePicture: true } },
-                        User_Attendance_driverIdToUser: { select: { id: true, username: true, profilePicture: true } }
-                    }
-                }
-            }
+            include: this.eventInclude(),
         });
     }
 
     async findOne(id: number): Promise<Event | null> {
         return this.prisma.event.findUnique({
             where: { id },
-            include: {
-                host: { select: { id: true, username: true, profilePicture: true } },
-                participants: {
-                    include: { 
-                        user: { select: { id: true, username: true, profilePicture: true } },
-                        User_Attendance_driverIdToUser: { select: { id: true, username: true, profilePicture: true } }
-                    }
-                }
-            },
+            include: this.eventInclude(),
         });
     }
 
@@ -83,12 +84,42 @@ export class EventsRepository {
     }
 
     async assignRide(eventId: number, passengerId: number, driverId: number | null) {
-        return this.prisma.attendance.update({
+        if (driverId === null) {
+            return this.prisma.rideAssignment.deleteMany({
+                where: {
+                    eventId,
+                    passengerId,
+                }
+            });
+        }
+
+        return this.prisma.rideAssignment.upsert({
             where: {
-                userId_eventId: { userId: passengerId, eventId }
+                eventId_passengerId: { eventId, passengerId }
             },
-            data: {
-                driverId
+            update: {
+                driverId,
+            },
+            create: {
+                eventId,
+                passengerId,
+                driverId,
+            },
+        });
+    }
+
+    async deleteRideAssignmentsForUsers(eventId: number, userIds: number[]) {
+        if (userIds.length === 0) {
+            return { count: 0 };
+        }
+
+        return this.prisma.rideAssignment.deleteMany({
+            where: {
+                eventId,
+                OR: [
+                    { passengerId: { in: userIds } },
+                    { driverId: { in: userIds } },
+                ],
             }
         });
     }
@@ -105,15 +136,7 @@ export class EventsRepository {
         return this.prisma.event.update({
             where: { id },
             data,
-            include: {
-                host: { select: { id: true, username: true, profilePicture: true } },
-                participants: {
-                    include: { 
-                        user: { select: { id: true, username: true, profilePicture: true } },
-                        User_Attendance_driverIdToUser: { select: { id: true, username: true, profilePicture: true } }
-                    }
-                }
-            },
+            include: this.eventInclude(),
         });
     }
 

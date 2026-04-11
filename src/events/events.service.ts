@@ -107,6 +107,14 @@ export class EventsService {
 
         if (participants) {
             const existingUserIds = event.participants.map(p => p.id);
+            const toRemove = existingUserIds.filter(id => !participants.includes(id));
+            if (toRemove.length > 0) {
+                await this.eventsRepo.deleteRideAssignmentsForUsers(id, toRemove);
+            }
+        }
+
+        if (participants) {
+            const existingUserIds = event.participants.map(p => p.id);
             const toAdd = participants.filter(id => !existingUserIds.includes(id));
             if (toAdd.length > 0) {
                 this.notifyUserIds(toAdd, event.id, NotificationCode.INVITATION_NEW, 'New Invitation', `You have been invited to "${event.title}"`);
@@ -166,7 +174,7 @@ export class EventsService {
         const participantData = event.participants.find(p => p.id === userId);
         const isParticipant = !!participantData;
 
-        if (!event.isOpen && !isParticipant) {
+        if (!event.isOpen && !isParticipant && event.host.id !== userId) {
             throw new ForbiddenException('This event is closed and cannot be joined spontaneously');
         }
 
@@ -174,7 +182,7 @@ export class EventsService {
             const result = await this.eventsRepo.join(userId, eventId, participateDto);
 
             const hostTokens = await this.eventsRepo.getUserTokens([event.host.id]);
-            if (hostTokens.length > 0) {
+            if (hostTokens.length > 0 && event.host.id !== userId) {
                 const joiningUser = await this.eventsRepo.getUserById(userId);
                 const username = joiningUser?.username || 'A user';
                 const wasPending = participantData?.status === 'PENDING';
@@ -207,9 +215,10 @@ export class EventsService {
 
         try {
             const result = await this.eventsRepo.leave(userId, eventId);
+            await this.eventsRepo.deleteRideAssignmentsForUsers(eventId, [userId]);
 
             const hostTokens = await this.eventsRepo.getUserTokens([event.host.id]);
-            if (hostTokens.length > 0) {
+            if (hostTokens.length > 0 && event.host.id !== userId) {
                 const leavingUser = await this.eventsRepo.getUserById(userId);
                 const username = leavingUser?.username || 'A user';
                 this.notificationsService.sendMulticast(
@@ -234,18 +243,29 @@ export class EventsService {
         if (!event) throw new NotFoundException(`Event with id ${eventId} not found`);
 
         const isHost = event.hostId === requestingUserId;
-        const isDriver = driverId === requestingUserId || (driverId === null && isHost); // host can unassign anyone, driver can unassign their own people
-
-        // Additional logic: verify passenger is in the event
-        const passenger = (event as any).participants.find(p => p.userId === passengerId);
+        const passenger = (event as any).participants?.find((p: any) => p.userId === passengerId);
 
         if (!passenger) throw new NotFoundException(`Passenger with id ${passengerId} is not in this event`);
 
-        // Permission check: only host can assign anyone to any driver. 
-        // Drivers can't assign others TO someone else, but they might be able to assign others TO themselves?
-        // Let's stick with: Host can do anything. Drivers can unassign people from THEIR car.
-        if (!isHost && !isDriver) {
+        const passengerAssignment = (event as any).rideAssignments?.find((assignment: any) => assignment.passengerId === passengerId);
+        const isCurrentDriver = passengerAssignment?.driverId === requestingUserId;
+        const isAssigningToSelf = driverId === requestingUserId;
+        const isUnassigningFromSelf = driverId === null && isCurrentDriver;
+
+        // Host can do anything. Drivers can only assign people to themselves or remove them from their own car.
+        if (!isHost && !isAssigningToSelf && !isUnassigningFromSelf) {
             throw new ForbiddenException('You do not have permission to assign rides for this event');
+        }
+
+        if (driverId !== null) {
+            const driver = (event as any).participants?.find((p: any) => p.userId === driverId);
+            if (!driver) {
+                throw new NotFoundException(`Driver with id ${driverId} is not in this event`);
+            }
+
+            if (!driver.hasVehicle) {
+                throw new ForbiddenException('Selected driver does not have a vehicle for this event');
+            }
         }
 
         await this.eventsRepo.assignRide(eventId, passengerId, driverId);
@@ -265,25 +285,31 @@ export class EventsService {
             profilePicture: event.host.profilePicture,
         };
 
-        const participantsDto: EventParticipantDto[] = event.participants.map((p: any) => ({
-            id: p.user.id,
-            username: p.user.username,
-            profilePicture: p.user.profilePicture,
-            status: p.status,
-            wantsFood: p.wantsFood,
-            wantsWeed: p.wantsWeed,
-            wantsSleep: p.wantsSleep,
-            wantsAlcohol: p.wantsAlcohol,
-            wantsBeer: p.wantsBeer,
-            hasVehicle: p.hasVehicle,
-            vehicleSeats: p.vehicleSeats,
-            driverId: p.driverId,
-            driver: p.User_Attendance_driverIdToUser ? {
-                id: p.User_Attendance_driverIdToUser.id,
-                username: p.User_Attendance_driverIdToUser.username,
-                profilePicture: p.User_Attendance_driverIdToUser.profilePicture,
-            } : undefined,
-        }));
+        const participantsDto: EventParticipantDto[] = event.participants.map((p: any) => {
+            // Map attendance plus the separate ride assignment table back into the legacy response shape.
+            // This keeps the client contract stable while the storage model changes underneath it.
+            const rideAssignment = event.rideAssignments?.find((ride: any) => ride.passengerId === p.userId);
+
+            return {
+                id: p.user.id,
+                username: p.user.username,
+                profilePicture: p.user.profilePicture,
+                status: p.status,
+                wantsFood: p.wantsFood,
+                wantsWeed: p.wantsWeed,
+                wantsSleep: p.wantsSleep,
+                wantsAlcohol: p.wantsAlcohol,
+                wantsBeer: p.wantsBeer,
+                hasVehicle: p.hasVehicle,
+                vehicleSeats: p.vehicleSeats,
+                driverId: rideAssignment?.driverId,
+                driver: rideAssignment?.driver ? {
+                    id: rideAssignment.driver.id,
+                    username: rideAssignment.driver.username,
+                    profilePicture: rideAssignment.driver.profilePicture,
+                } : undefined,
+            };
+        });
 
         return {
             id: event.id,

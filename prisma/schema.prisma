@@ -11,7 +11,8 @@ model User {
   username                             String       @unique
   password                             String
   profilePicture                       String?
-  Attendance_Attendance_driverIdToUser Attendance[] @relation("Attendance_driverIdToUser")
+  rideAssignmentsAsDriver              RideAssignment[] @relation("RideAssignmentDriver")
+  rideAssignmentsAsPassenger           RideAssignment[] @relation("RideAssignmentPassenger")
   invitations                          Attendance[]
   hostedEvents                         Event[]      @relation("EventHost")
   fcmTokens                            FcmToken[]
@@ -45,6 +46,7 @@ model Event {
   sleepPrice   Float?
   weedPrice    Float?
   participants Attendance[]
+  rideAssignments RideAssignment[]
   host         User         @relation("EventHost", fields: [hostId], references: [id])
 }
 
@@ -58,15 +60,27 @@ model Attendance {
   wantsSleep                     Boolean      @default(false)
   wantsWeed                      Boolean      @default(false)
   wantsBeer                      Boolean      @default(false)
-  driverId                       Int?
   hasVehicle                     Boolean      @default(false)
   vehicleSeats                   Int          @default(0)
   vehicleType                    VehicleType?
-  User_Attendance_driverIdToUser User?        @relation("Attendance_driverIdToUser", fields: [driverId], references: [id])
   event                          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user                           User         @relation(fields: [userId], references: [id])
 
   @@unique([userId, eventId])
+}
+
+model RideAssignment {
+  id          Int  @id @default(autoincrement())
+  eventId     Int
+  driverId    Int
+  passengerId Int
+
+  event     Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  driver    User  @relation("RideAssignmentDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  passenger User  @relation("RideAssignmentPassenger", fields: [passengerId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, passengerId])
+  @@index([eventId, driverId])
 }
 
 enum InviteStatus {
