@@ -24,4 +24,13 @@ export class NotificationsController {
     async subscribe(@Request() req, @Body() body: SubscribeDto): Promise<void> {
         await this.notificationsService.subscribe(req.user.userId, body.token);
     }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Post('unsubscribe')
+    @ApiOperation({ summary: 'Unsubscribe device from notifications' })
+    @ApiResponse({ status: 201, description: 'Unsubscribed successfully' })
+    async unsubscribe(@Body() body: SubscribeDto): Promise<void> {
+        await this.notificationsService.unsubscribe(body.token);
+    }
 }

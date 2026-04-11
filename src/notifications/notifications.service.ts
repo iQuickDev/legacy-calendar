@@ -48,6 +48,12 @@ export class NotificationsService implements OnModuleInit {
         });
     }
 
+    async unsubscribe(token: string): Promise<void> {
+        await this.prisma.fcmToken.deleteMany({
+            where: { token },
+        });
+    }
+
     async sendNotification(token: string, title: string, body: string, data?: Record<string, string>) {
         if (!this.initialized) {
             this.logger.warn('Firebase not initialized, skipping notification');
