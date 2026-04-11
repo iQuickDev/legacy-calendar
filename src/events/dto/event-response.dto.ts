@@ -18,7 +18,24 @@ export class EventParticipantDto extends UserDto {
 
     @ApiProperty({ example: true, description: 'User wants alcohol' })
     wantsAlcohol?: boolean;
+
+    @ApiProperty({ example: true, description: 'User wants beer' })
+    wantsBeer?: boolean;
+
+    @ApiProperty({ example: true, description: 'User has a vehicle' })
+    hasVehicle?: boolean;
+
+
+    @ApiProperty({ example: 4, description: 'Number of available seats' })
+    vehicleSeats?: number;
+
+    @ApiProperty({ example: 1, description: 'Driver ID', required: false })
+    driverId?: number;
+
+    @ApiProperty({ type: UserDto, description: 'Driver details', required: false })
+    driver?: UserDto;
 }
+
 
 export class EventResponseDto {
     @ApiProperty({ example: 1, description: 'Event ID' })
@@ -59,4 +76,23 @@ export class EventResponseDto {
 
     @ApiProperty({ example: true, description: 'Event has alcohol' })
     hasAlcohol?: boolean;
+
+    @ApiProperty({ example: true, description: 'Event has beer' })
+    hasBeer?: boolean;
+
+    @ApiProperty({ example: 10.5, description: 'Food budget', required: false })
+    foodPrice?: number;
+
+    @ApiProperty({ example: 50, description: 'Weed budget', required: false })
+    weedPrice?: number;
+
+    @ApiProperty({ example: 20, description: 'Sleep/Accommodation budget', required: false })
+    sleepPrice?: number;
+
+    @ApiProperty({ example: 30, description: 'Alcohol budget', required: false })
+    alcoholPrice?: number;
+
+    @ApiProperty({ example: 15, description: 'Beer budget', required: false })
+    beerPrice?: number;
 }
+

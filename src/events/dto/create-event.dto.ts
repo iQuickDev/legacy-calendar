@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsDateString, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateEventDto {
@@ -56,4 +56,34 @@ export class CreateEventDto {
     @IsOptional()
     @IsBoolean()
     hasAlcohol?: boolean;
+
+    @ApiProperty({ example: true, description: 'Whether the event has beer', required: false })
+    @IsOptional()
+    @IsBoolean()
+    hasBeer?: boolean;
+
+    @ApiProperty({ example: 10.5, description: 'Food budget', required: false })
+    @IsOptional()
+    @IsNumber()
+    foodPrice?: number;
+
+    @ApiProperty({ example: 50, description: 'Weed budget', required: false })
+    @IsOptional()
+    @IsNumber()
+    weedPrice?: number;
+
+    @ApiProperty({ example: 20, description: 'Sleep/Accommodation budget', required: false })
+    @IsOptional()
+    @IsNumber()
+    sleepPrice?: number;
+
+    @ApiProperty({ example: 30, description: 'Alcohol budget', required: false })
+    @IsOptional()
+    @IsNumber()
+    alcoholPrice?: number;
+
+    @ApiProperty({ example: 15, description: 'Beer budget', required: false })
+    @IsOptional()
+    @IsNumber()
+    beerPrice?: number;
 }

@@ -22,4 +22,20 @@ export class ParticipateDto {
     @IsOptional()
     @IsBoolean()
     wantsAlcohol?: boolean;
+
+    @ApiProperty({ example: true, description: 'Whether the user wants beer', required: false })
+    @IsOptional()
+    @IsBoolean()
+    wantsBeer?: boolean;
+
+    @ApiProperty({ example: true, description: 'Whether the user has a vehicle', required: false })
+    @IsOptional()
+    @IsBoolean()
+    hasVehicle?: boolean;
+
+
+    @ApiProperty({ example: 4, description: 'Number of available seats', required: false })
+    @IsOptional()
+    vehicleSeats?: number;
 }
+

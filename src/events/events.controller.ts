@@ -99,4 +99,19 @@ export class EventsController {
     editParticipation(@Param('id', ParseIntPipe) id: number, @Body() participateDto: ParticipateDto, @Request() req) {
         return this.eventsService.join(id, req.user.userId, participateDto);
     }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
+    @Post(':id/assign-ride')
+    @ApiOperation({ summary: 'Assign a ride to a passenger' })
+    @ApiResponse({ status: 201, description: 'Ride assigned successfully' })
+    assignRide(
+        @Param('id', ParseIntPipe) id: number,
+        @Body('passengerId') passengerId: number,
+        @Body('driverId') driverId: number | null,
+        @Request() req
+    ) {
+        return this.eventsService.assignRide(id, passengerId, driverId, req.user.userId);
+    }
 }
+

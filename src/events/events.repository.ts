@@ -20,7 +20,10 @@ export class EventsRepository {
             include: {
                 host: { select: { id: true, username: true, profilePicture: true } },
                 participants: {
-                    include: { user: { select: { id: true, username: true, profilePicture: true } } }
+                    include: { 
+                        user: { select: { id: true, username: true, profilePicture: true } },
+                        User_Attendance_driverIdToUser: { select: { id: true, username: true, profilePicture: true } }
+                    }
                 }
             }
         });
@@ -32,7 +35,10 @@ export class EventsRepository {
             include: {
                 host: { select: { id: true, username: true, profilePicture: true } },
                 participants: {
-                    include: { user: { select: { id: true, username: true, profilePicture: true } } }
+                    include: { 
+                        user: { select: { id: true, username: true, profilePicture: true } },
+                        User_Attendance_driverIdToUser: { select: { id: true, username: true, profilePicture: true } }
+                    }
                 }
             },
         });
@@ -42,8 +48,8 @@ export class EventsRepository {
         return this.prisma.event.delete({ where: { id } });
     }
 
-    async join(userId: number, eventId: number, participateDto: ParticipateDto) {
-        const { wantsFood, wantsWeed, wantsSleep, wantsAlcohol } = participateDto;
+    async join(userId: number, eventId: number, participateDto: any) {
+        const { wantsFood, wantsWeed, wantsSleep, wantsAlcohol, wantsBeer, hasVehicle, vehicleType, vehicleSeats } = participateDto;
 
         return this.prisma.attendance.upsert({
             where: {
@@ -55,6 +61,10 @@ export class EventsRepository {
                 wantsWeed,
                 wantsSleep,
                 wantsAlcohol,
+                wantsBeer,
+                hasVehicle,
+                vehicleType,
+                vehicleSeats,
             },
             create: {
                 userId,
@@ -64,7 +74,22 @@ export class EventsRepository {
                 wantsWeed,
                 wantsSleep,
                 wantsAlcohol,
+                wantsBeer,
+                hasVehicle,
+                vehicleType,
+                vehicleSeats,
             },
+        });
+    }
+
+    async assignRide(eventId: number, passengerId: number, driverId: number | null) {
+        return this.prisma.attendance.update({
+            where: {
+                userId_eventId: { userId: passengerId, eventId }
+            },
+            data: {
+                driverId
+            }
         });
     }
 
@@ -83,11 +108,15 @@ export class EventsRepository {
             include: {
                 host: { select: { id: true, username: true, profilePicture: true } },
                 participants: {
-                    include: { user: { select: { id: true, username: true, profilePicture: true } } }
+                    include: { 
+                        user: { select: { id: true, username: true, profilePicture: true } },
+                        User_Attendance_driverIdToUser: { select: { id: true, username: true, profilePicture: true } }
+                    }
                 }
             },
         });
     }
+
 
     async inviteUser(eventId: number, username: string) {
         const user = await this.prisma.user.findUnique({ where: { username } });

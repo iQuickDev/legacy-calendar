@@ -229,6 +229,35 @@ export class EventsService {
         }
     }
 
+    async assignRide(eventId: number, passengerId: number, driverId: number | null, requestingUserId: number) {
+        const event = await this.eventsRepo.findOne(eventId);
+        if (!event) throw new NotFoundException(`Event with id ${eventId} not found`);
+
+        const isHost = event.hostId === requestingUserId;
+        const isDriver = driverId === requestingUserId || (driverId === null && isHost); // host can unassign anyone, driver can unassign their own people
+
+        // Additional logic: verify passenger is in the event
+        const passenger = (event as any).participants.find(p => p.userId === passengerId);
+
+        if (!passenger) throw new NotFoundException(`Passenger with id ${passengerId} is not in this event`);
+
+        // Permission check: only host can assign anyone to any driver. 
+        // Drivers can't assign others TO someone else, but they might be able to assign others TO themselves?
+        // Let's stick with: Host can do anything. Drivers can unassign people from THEIR car.
+        if (!isHost && !isDriver) {
+            throw new ForbiddenException('You do not have permission to assign rides for this event');
+        }
+
+        await this.eventsRepo.assignRide(eventId, passengerId, driverId);
+
+        // Notify passenger
+        if (driverId) {
+            this.notifyUserIds([passengerId], eventId, NotificationCode.EVENT_UPDATED, 'Ride Assigned', `You have been assigned a ride for "${event.title}"`);
+        }
+
+        return this.findOne(eventId);
+    }
+
     private mapToDto(event: any): EventResponseDto {
         const hostDto: UserDto = {
             id: event.host.id,
@@ -245,6 +274,15 @@ export class EventsService {
             wantsWeed: p.wantsWeed,
             wantsSleep: p.wantsSleep,
             wantsAlcohol: p.wantsAlcohol,
+            wantsBeer: p.wantsBeer,
+            hasVehicle: p.hasVehicle,
+            vehicleSeats: p.vehicleSeats,
+            driverId: p.driverId,
+            driver: p.User_Attendance_driverIdToUser ? {
+                id: p.User_Attendance_driverIdToUser.id,
+                username: p.User_Attendance_driverIdToUser.username,
+                profilePicture: p.User_Attendance_driverIdToUser.profilePicture,
+            } : undefined,
         }));
 
         return {
@@ -261,6 +299,13 @@ export class EventsService {
             hasWeed: event.hasWeed,
             hasSleep: event.hasSleep,
             hasAlcohol: event.hasAlcohol,
+            hasBeer: event.hasBeer,
+            foodPrice: event.foodPrice,
+            weedPrice: event.weedPrice,
+            sleepPrice: event.sleepPrice,
+            alcoholPrice: event.alcoholPrice,
+            beerPrice: event.beerPrice,
         };
     }
 }
+
