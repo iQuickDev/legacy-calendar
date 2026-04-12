@@ -50,7 +50,7 @@ export class EventsRepository {
     }
 
     async join(userId: number, eventId: number, participateDto: any) {
-        const { wantsFood, wantsWeed, wantsSleep, wantsAlcohol, wantsBeer, hasVehicle, vehicleType, vehicleSeats } = participateDto;
+        const { wantsFood, wantsWeed, wantsSleep, wantsAlcohol, wantsBeer, wantsGas, hasVehicle, vehicleSeats } = participateDto;
 
         return this.prisma.attendance.upsert({
             where: {
@@ -63,8 +63,8 @@ export class EventsRepository {
                 wantsSleep,
                 wantsAlcohol,
                 wantsBeer,
+                wantsGas,
                 hasVehicle,
-                vehicleType,
                 vehicleSeats,
             },
             create: {
@@ -76,8 +76,8 @@ export class EventsRepository {
                 wantsSleep,
                 wantsAlcohol,
                 wantsBeer,
+                wantsGas,
                 hasVehicle,
-                vehicleType,
                 vehicleSeats,
             },
         });
