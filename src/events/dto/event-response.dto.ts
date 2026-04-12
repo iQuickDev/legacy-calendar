@@ -22,12 +22,8 @@ export class EventParticipantDto extends UserDto {
     @ApiProperty({ example: true, description: 'User wants beer' })
     wantsBeer?: boolean;
 
-    @ApiProperty({ example: true, description: 'User wants gas' })
-    wantsGas?: boolean;
-
     @ApiProperty({ example: true, description: 'User has a vehicle' })
     hasVehicle?: boolean;
-
 
     @ApiProperty({ example: 4, description: 'Number of available seats' })
     vehicleSeats?: number;
@@ -83,9 +79,6 @@ export class EventResponseDto {
     @ApiProperty({ example: true, description: 'Event has beer' })
     hasBeer?: boolean;
 
-    @ApiProperty({ example: true, description: 'Event has gas' })
-    hasGas?: boolean;
-
     @ApiProperty({ example: 10.5, description: 'Food budget', required: false })
     foodPrice?: number;
 
@@ -100,8 +93,5 @@ export class EventResponseDto {
 
     @ApiProperty({ example: 15, description: 'Beer budget', required: false })
     beerPrice?: number;
-
-    @ApiProperty({ example: 15, description: 'Gas budget', required: false })
-    gasPrice?: number;
 }
 

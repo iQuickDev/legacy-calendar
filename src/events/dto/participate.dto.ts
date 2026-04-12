@@ -28,11 +28,6 @@ export class ParticipateDto {
     @IsBoolean()
     wantsBeer?: boolean;
 
-    @ApiProperty({ example: true, description: 'Whether the user wants gas', required: false })
-    @IsOptional()
-    @IsBoolean()
-    wantsGas?: boolean;
-
     @ApiProperty({ example: true, description: 'Whether the user has a vehicle', required: false })
     @IsOptional()
     @IsBoolean()

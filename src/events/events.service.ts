@@ -300,7 +300,6 @@ export class EventsService {
                 wantsSleep: p.wantsSleep,
                 wantsAlcohol: p.wantsAlcohol,
                 wantsBeer: p.wantsBeer,
-                wantsGas: p.wantsGas,
                 hasVehicle: p.hasVehicle,
                 vehicleSeats: p.vehicleSeats,
                 driverId: rideAssignment?.driverId,
@@ -327,13 +326,11 @@ export class EventsService {
             hasSleep: event.hasSleep,
             hasAlcohol: event.hasAlcohol,
             hasBeer: event.hasBeer,
-            hasGas: event.hasGas,
             foodPrice: event.foodPrice,
             weedPrice: event.weedPrice,
             sleepPrice: event.sleepPrice,
             alcoholPrice: event.alcoholPrice,
-            beerPrice: event.beerPrice,
-            gasPrice: event.gasPrice,
+            beerPrice: event.beerPrice
         };
     }
 }

@@ -45,8 +45,6 @@ model Event {
   hasBeer      Boolean      @default(false)
   sleepPrice   Float?
   weedPrice    Float?
-  hasGas       Boolean      @default(false)
-  gasPrice     Float?
   participants Attendance[]
   rideAssignments RideAssignment[]
   host         User         @relation("EventHost", fields: [hostId], references: [id])
@@ -62,7 +60,6 @@ model Attendance {
   wantsSleep                     Boolean      @default(false)
   wantsWeed                      Boolean      @default(false)
   wantsBeer                      Boolean      @default(false)
-  wantsGas                       Boolean      @default(false)
   hasVehicle                     Boolean      @default(false)
   vehicleSeats                   Int          @default(0)
   event                          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)

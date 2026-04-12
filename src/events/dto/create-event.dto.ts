@@ -62,11 +62,6 @@ export class CreateEventDto {
     @IsBoolean()
     hasBeer?: boolean;
 
-    @ApiProperty({ example: true, description: 'Whether the event has gas', required: false })
-    @IsOptional()
-    @IsBoolean()
-    hasGas?: boolean;
-
     @ApiProperty({ example: 10.5, description: 'Food budget', required: false })
     @IsOptional()
     @IsNumber()
@@ -91,9 +86,4 @@ export class CreateEventDto {
     @IsOptional()
     @IsNumber()
     beerPrice?: number;
-
-    @ApiProperty({ example: 15, description: 'Gas budget', required: false })
-    @IsOptional()
-    @IsNumber()
-    gasPrice?: number;
 }
