@@ -43,11 +43,11 @@ export class EventResponseDto {
     @ApiProperty({ example: 'Team Standup', description: 'Title of the event' })
     title: string;
 
-    @ApiProperty({ example: 'Weekly sync with the team', description: 'Description', required: false })
-    description?: string;
+    @ApiProperty({ example: 'Weekly sync with the team', description: 'Description', required: false, nullable: true })
+    description?: string | null;
 
-    @ApiProperty({ example: 'Meeting Room A', description: 'Location', required: false })
-    location?: string;
+    @ApiProperty({ example: 'Meeting Room A', description: 'Location', required: false, nullable: true })
+    location?: string | null;
 
     @ApiProperty({ example: '2026-02-04T10:00:00Z', description: 'Start time' })
     startTime: Date;
@@ -79,19 +79,19 @@ export class EventResponseDto {
     @ApiProperty({ example: true, description: 'Event has beer' })
     hasBeer?: boolean;
 
-    @ApiProperty({ example: 10.5, description: 'Food budget', required: false })
-    foodPrice?: number;
+    @ApiProperty({ example: 10.5, description: 'Food budget', required: false, nullable: true })
+    foodPrice?: number | null;
 
-    @ApiProperty({ example: 50, description: 'Weed budget', required: false })
-    weedPrice?: number;
+    @ApiProperty({ example: 50, description: 'Weed budget', required: false, nullable: true })
+    weedPrice?: number | null;
 
-    @ApiProperty({ example: 20, description: 'Sleep/Accommodation budget', required: false })
-    sleepPrice?: number;
+    @ApiProperty({ example: 20, description: 'Sleep/Accommodation budget', required: false, nullable: true })
+    sleepPrice?: number | null;
 
-    @ApiProperty({ example: 30, description: 'Alcohol budget', required: false })
-    alcoholPrice?: number;
+    @ApiProperty({ example: 30, description: 'Alcohol budget', required: false, nullable: true })
+    alcoholPrice?: number | null;
 
-    @ApiProperty({ example: 15, description: 'Beer budget', required: false })
-    beerPrice?: number;
+    @ApiProperty({ example: 15, description: 'Beer budget', required: false, nullable: true })
+    beerPrice?: number | null;
 }
 

@@ -1,15 +1,8 @@
 import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NotificationsService } from './notifications.service';
-
-class SubscribeDto {
-    @ApiProperty({ example: 'fcm_token_here', description: 'Firebase FCM Token' })
-    @IsString()
-    @IsNotEmpty()
-    token: string;
-}
+import { SubscribeNotificationDto } from './dto/subscribe-notification.dto';
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -21,7 +14,7 @@ export class NotificationsController {
     @Post('subscribe')
     @ApiOperation({ summary: 'Subscribe device to notifications' })
     @ApiResponse({ status: 201, description: 'Subscribed successfully' })
-    async subscribe(@Request() req, @Body() body: SubscribeDto): Promise<void> {
+    async subscribe(@Request() req, @Body() body: SubscribeNotificationDto): Promise<void> {
         await this.notificationsService.subscribe(req.user.userId, body.token);
     }
 
@@ -30,7 +23,7 @@ export class NotificationsController {
     @Post('unsubscribe')
     @ApiOperation({ summary: 'Unsubscribe device from notifications' })
     @ApiResponse({ status: 201, description: 'Unsubscribed successfully' })
-    async unsubscribe(@Body() body: SubscribeDto): Promise<void> {
+    async unsubscribe(@Body() body: SubscribeNotificationDto): Promise<void> {
         await this.notificationsService.unsubscribe(body.token);
     }
 }

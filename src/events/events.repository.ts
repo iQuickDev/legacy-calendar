@@ -3,45 +3,50 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Event, InviteStatus } from '@prisma/client';
 import { ParticipateDto } from './dto/participate.dto';
 
+export const EVENT_INCLUDE = {
+    host: { select: { id: true, username: true, profilePicture: true } },
+    participants: {
+        include: {
+            user: { select: { id: true, username: true, profilePicture: true } },
+        },
+    },
+    rideAssignments: {
+        include: {
+            driver: { select: { id: true, username: true, profilePicture: true } },
+            passenger: { select: { id: true, username: true, profilePicture: true } },
+        },
+    },
+} satisfies Prisma.EventInclude;
+
+export type EventWithRelations = Prisma.EventGetPayload<{
+    include: typeof EVENT_INCLUDE;
+}>;
+
 @Injectable()
 export class EventsRepository {
     constructor(private readonly prisma: PrismaService) { }
 
-    private eventInclude() {
-        return {
-            host: { select: { id: true, username: true, profilePicture: true } },
-            participants: {
-                include: {
-                    user: { select: { id: true, username: true, profilePicture: true } },
-                }
-            },
-            rideAssignments: {
-                include: {
-                    driver: { select: { id: true, username: true, profilePicture: true } },
-                    passenger: { select: { id: true, username: true, profilePicture: true } },
-                }
-            }
-        };
-    }
-
-    async create(data: Prisma.EventCreateInput): Promise<Event> {
-        return this.prisma.event.create({ data });
+    async create(data: Prisma.EventCreateInput): Promise<EventWithRelations> {
+        return this.prisma.event.create({
+            data,
+            include: EVENT_INCLUDE,
+        });
     }
 
     async getUserById(id: number) {
         return this.prisma.user.findUnique({ where: { id } });
     }
 
-    async findAll(): Promise<Event[]> {
+    async findAll(): Promise<EventWithRelations[]> {
         return this.prisma.event.findMany({
-            include: this.eventInclude(),
+            include: EVENT_INCLUDE,
         });
     }
 
-    async findOne(id: number): Promise<Event | null> {
+    async findOne(id: number): Promise<EventWithRelations | null> {
         return this.prisma.event.findUnique({
             where: { id },
-            include: this.eventInclude(),
+            include: EVENT_INCLUDE,
         });
     }
 
@@ -49,7 +54,7 @@ export class EventsRepository {
         return this.prisma.event.delete({ where: { id } });
     }
 
-    async join(userId: number, eventId: number, participateDto: any) {
+    async join(userId: number, eventId: number, participateDto: ParticipateDto) {
         const { wantsFood, wantsWeed, wantsSleep, wantsAlcohol, wantsBeer, hasVehicle, vehicleSeats } = participateDto;
 
         return this.prisma.attendance.upsert({
@@ -57,7 +62,7 @@ export class EventsRepository {
                 userId_eventId: { userId, eventId }
             },
             update: {
-                status: 'ACCEPTED',
+                status: InviteStatus.ACCEPTED,
                 wantsFood,
                 wantsWeed,
                 wantsSleep,
@@ -69,7 +74,7 @@ export class EventsRepository {
             create: {
                 userId,
                 eventId,
-                status: 'ACCEPTED',
+                status: InviteStatus.ACCEPTED,
                 wantsFood,
                 wantsWeed,
                 wantsSleep,
@@ -130,11 +135,11 @@ export class EventsRepository {
         });
     }
 
-    async update(id: number, data: any): Promise<Event> {
+    async update(id: number, data: Prisma.EventUpdateInput): Promise<EventWithRelations> {
         return this.prisma.event.update({
             where: { id },
             data,
-            include: this.eventInclude(),
+            include: EVENT_INCLUDE,
         });
     }
 
@@ -155,7 +160,7 @@ export class EventsRepository {
             data: {
                 userId: user.id,
                 eventId,
-                status: 'PENDING',
+                status: InviteStatus.PENDING,
             },
         });
 

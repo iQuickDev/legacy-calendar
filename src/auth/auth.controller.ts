@@ -1,4 +1,4 @@
-import { Controller, Post, UseGuards, Request, Body, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -21,7 +21,7 @@ export class AuthController {
     @ApiBody({ type: AuthLoginDto })
     @ApiResponse({ status: 200, description: 'Return JWT access token' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
-    async login(@Request() req, @Body() loginDto: AuthLoginDto) {
+    async login(@Request() req, @Body() _loginDto: AuthLoginDto) {
         return this.authService.login(req.user);
     }
 

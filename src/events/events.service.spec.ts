@@ -5,6 +5,7 @@ describe('EventsService.assignRide', () => {
     const eventsRepo = {
         findOne: jest.fn(),
         assignRide: jest.fn(),
+        getUserTokens: jest.fn().mockResolvedValue([]),
     } as any;
 
     const notificationsService = {

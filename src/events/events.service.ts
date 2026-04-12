@@ -1,13 +1,14 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, InviteStatus } from '@prisma/client';
 import { CreateEventDto } from './dto/create-event.dto';
-import { EventsRepository } from './events.repository';
-import { NotificationsService } from '../notifications/notifications.service';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { ParticipateDto } from './dto/participate.dto';
-import { EventResponseDto, EventParticipantDto } from './dto/event-response.dto';
-import { UserDto } from '../users/dto/user.dto';
-import { Prisma, InviteStatus } from '@prisma/client';
+import { EventResponseDto } from './dto/event-response.dto';
+import { EventsRepository, EventWithRelations } from './events.repository';
+import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCode } from '../notifications/notification-codes';
+import { EVENT_NOTIFICATION_MESSAGES, EVENT_NOTIFICATION_TITLES } from './event-notification.constants';
+import { mapEventToDto } from './event-response.mapper';
 
 @Injectable()
 export class EventsService {
@@ -17,33 +18,42 @@ export class EventsService {
     ) { }
 
     async create(createEventDto: CreateEventDto, userId: number): Promise<EventResponseDto> {
-        const { participants, ...eventData } = createEventDto;
-
+        const { participants = [], ...eventData } = createEventDto;
         const hostId = Number(userId);
-        const participantIds = participants?.map(id => Number(id)) || [];
+        const participantIds = this.normalizeUserIds(participants);
 
         try {
             const event = await this.eventsRepo.create({
-                ...eventData,
-                endTime: (eventData.endTime || null) as any,
+                ...this.buildCreateEventInput(eventData),
                 host: { connect: { id: hostId } },
-                participants: participantIds.length ? {
-                    create: participantIds.map(id => ({
-                        userId: id,
-                        status: 'PENDING'
-                    }))
-                } : undefined
+                ...(participantIds.length > 0
+                    ? {
+                        participants: {
+                            create: participantIds.map(userId => ({
+                                userId,
+                                status: InviteStatus.PENDING,
+                            })),
+                        },
+                    }
+                    : {}),
             });
 
             if (participantIds.length > 0) {
-                this.notifyUserIds(participantIds, event.id, NotificationCode.INVITATION_NEW, 'New Invitation', `You have been invited to "${event.title}"`);
+                await this.notifyUserIds(
+                    participantIds,
+                    event.id,
+                    NotificationCode.INVITATION_NEW,
+                    EVENT_NOTIFICATION_TITLES.invitationNew,
+                    EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title),
+                );
             }
 
-            return this.findOne(event.id);
+            return mapEventToDto(event);
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                console.error('Prisma Connect Error:', error.meta);
-                throw new NotFoundException(`User in host or participants not found. IDs: host=${hostId}, participants=[${participantIds.join(', ')}]`);
+                throw new NotFoundException(
+                    `User in host or participants not found. IDs: host=${hostId}, participants=[${participantIds.join(', ')}]`,
+                );
             }
             throw error;
         }
@@ -51,84 +61,91 @@ export class EventsService {
 
     async findAll(): Promise<EventResponseDto[]> {
         const events = await this.eventsRepo.findAll();
-        return events.map(event => this.mapToDto(event));
+        return events.map(event => mapEventToDto(event));
     }
 
     async findOne(id: number): Promise<EventResponseDto> {
         const event = await this.eventsRepo.findOne(id);
-        if (!event) throw new NotFoundException(`Event with id ${id} not found`);
-        return this.mapToDto(event);
+        if (!event) {
+            throw new NotFoundException(`Event with id ${id} not found`);
+        }
+
+        return mapEventToDto(event);
     }
 
     async remove(id: number, userId: number) {
-        const event = await this.eventsRepo.findOne(id);
-        if (!event) throw new NotFoundException(`Event with id ${id} not found`);
+        const event = await this.findEventOrThrow(id);
 
         if (event.hostId !== userId) {
             throw new ForbiddenException('Only the host can delete this event');
         }
 
-        await this.notifyParticipants(event.id, NotificationCode.EVENT_CANCELLED, 'Event Cancelled', `Event "${event.title}" has been cancelled.`);
+        await this.notifyParticipants(
+            event.id,
+            NotificationCode.EVENT_CANCELLED,
+            EVENT_NOTIFICATION_TITLES.eventCancelled,
+            EVENT_NOTIFICATION_MESSAGES.eventCancelled(event.title),
+        );
 
         return this.eventsRepo.remove(id);
     }
 
     async update(id: number, updateEventDto: UpdateEventDto, userId: number): Promise<EventResponseDto> {
-        const event = await this.findOne(id);
+        const event = await this.findEventOrThrow(id);
 
-        if (event.host.id !== userId) {
+        if (event.hostId !== userId) {
             throw new ForbiddenException('Only the host can update this event');
         }
 
         const { participants, ...eventData } = updateEventDto;
-        const updateData: any = { ...eventData };
+        const updateData: Prisma.EventUpdateInput = this.buildUpdateEventInput(eventData);
+        let participantDiff: { toAdd: number[]; toRemove: number[] } | undefined;
 
         if (participants) {
-            const existingUserIds = event.participants.map(p => p.id);
-            const toAdd = participants.filter(id => !existingUserIds.includes(id));
-            const toRemove = existingUserIds.filter(id => !participants.includes(id));
+            const existingParticipantIds = this.getParticipantUserIds(event);
+            const nextParticipantIds = this.normalizeUserIds(participants);
+            participantDiff = this.diffParticipantIds(existingParticipantIds, nextParticipantIds);
+            const { toAdd, toRemove } = participantDiff;
 
-            if (toAdd.length > 0 || toRemove.length > 0) {
-                const participantsUpdate: any = {};
-                if (toRemove.length > 0) {
-                    participantsUpdate.deleteMany = { userId: { in: toRemove } };
-                }
-                if (toAdd.length > 0) {
-                    participantsUpdate.create = toAdd.map(pid => ({
-                        userId: pid,
-                        status: 'PENDING'
-                    }));
-                }
+            const participantsUpdate = this.buildParticipantsUpdate(toAdd, toRemove);
+            if (participantsUpdate) {
                 updateData.participants = participantsUpdate;
             }
-        }
 
-        await this.eventsRepo.update(id, updateData);
-
-        if (participants) {
-            const existingUserIds = event.participants.map(p => p.id);
-            const toRemove = existingUserIds.filter(id => !participants.includes(id));
             if (toRemove.length > 0) {
                 await this.eventsRepo.deleteRideAssignmentsForUsers(id, toRemove);
             }
         }
 
-        if (participants) {
-            const existingUserIds = event.participants.map(p => p.id);
-            const toAdd = participants.filter(id => !existingUserIds.includes(id));
+        const updatedEvent = await this.eventsRepo.update(id, updateData);
+
+        if (participantDiff) {
+            const { toAdd } = participantDiff;
+
             if (toAdd.length > 0) {
-                this.notifyUserIds(toAdd, event.id, NotificationCode.INVITATION_NEW, 'New Invitation', `You have been invited to "${event.title}"`);
+                await this.notifyUserIds(
+                    toAdd,
+                    event.id,
+                    NotificationCode.INVITATION_NEW,
+                    EVENT_NOTIFICATION_TITLES.invitationNew,
+                    EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title),
+                );
             }
         }
 
-        this.notifyParticipants(event.id, NotificationCode.EVENT_UPDATED, 'Event Updated', `Event "${event.title}" has been updated.`, InviteStatus.ACCEPTED);
+        await this.notifyParticipants(
+            event.id,
+            NotificationCode.EVENT_UPDATED,
+            EVENT_NOTIFICATION_TITLES.eventUpdated,
+            EVENT_NOTIFICATION_MESSAGES.eventUpdated(event.title),
+            InviteStatus.ACCEPTED,
+        );
 
-        return this.findOne(id);
+        return mapEventToDto(updatedEvent);
     }
 
     async invite(eventId: number, username: string, userId: number) {
-        const event = await this.eventsRepo.findOne(eventId);
-        if (!event) throw new NotFoundException(`Event with id ${eventId} not found`);
+        const event = await this.findEventOrThrow(eventId);
 
         if (event.hostId !== userId) {
             throw new ForbiddenException('Only the host can invite users');
@@ -137,96 +154,78 @@ export class EventsService {
         const invitedUser = await this.eventsRepo.inviteUser(eventId, username);
 
         if (invitedUser) {
-            const tokens = await this.eventsRepo.getUserTokens([invitedUser.id]);
-            if (tokens.length > 0) {
-                this.notificationsService.sendMulticast(
-                    tokens,
-                    'New Invitation',
-                    `You have been invited to "${event.title}"`,
-                    { type: NotificationCode.INVITATION_NEW, eventId: String(eventId) }
-                );
-            }
+            await this.notifyUserIds(
+                [invitedUser.id],
+                eventId,
+                NotificationCode.INVITATION_NEW,
+                EVENT_NOTIFICATION_TITLES.invitationNew,
+                EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title),
+            );
         }
 
         return { message: 'User invited' };
     }
 
-    private async notifyParticipants(eventId: number, type: NotificationCode, title: string, body: string, status?: InviteStatus) {
-        const tokens = status
-            ? await this.eventsRepo.getParticipantTokensByStatus(eventId, status)
-            : await this.eventsRepo.getParticipantTokens(eventId);
-
-        if (tokens.length > 0) {
-            this.notificationsService.sendMulticast(tokens, title, body, { type, eventId: String(eventId) });
-        }
-    }
-
-    private async notifyUserIds(userIds: number[], eventId: number, type: NotificationCode, title: string, body: string) {
-        const tokens = await this.eventsRepo.getUserTokens(userIds);
-        if (tokens.length > 0) {
-            this.notificationsService.sendMulticast(tokens, title, body, { type, eventId: String(eventId) });
-        }
-    }
-
     async join(eventId: number, userId: number, participateDto: ParticipateDto) {
-        const event = await this.findOne(eventId);
+        const event = await this.findEventOrThrow(eventId);
+        const participant = this.getParticipant(event, userId);
+        const isParticipant = !!participant;
 
-        const participantData = event.participants.find(p => p.id === userId);
-        const isParticipant = !!participantData;
-
-        if (!event.isOpen && !isParticipant && event.host.id !== userId) {
+        if (!event.isOpen && !isParticipant && event.hostId !== userId) {
             throw new ForbiddenException('This event is closed and cannot be joined spontaneously');
         }
 
-        try {
-            const result = await this.eventsRepo.join(userId, eventId, participateDto);
+        const result = await this.eventsRepo.join(userId, eventId, participateDto);
 
-            const hostTokens = await this.eventsRepo.getUserTokens([event.host.id]);
-            if (hostTokens.length > 0 && event.host.id !== userId) {
+        if (event.hostId !== userId) {
+            const hostTokens = await this.eventsRepo.getUserTokens([event.hostId]);
+
+            if (hostTokens.length > 0) {
                 const joiningUser = await this.eventsRepo.getUserById(userId);
                 const username = joiningUser?.username || 'A user';
-                const wasPending = participantData?.status === 'PENDING';
+                const wasPending = participant?.status === InviteStatus.PENDING;
 
                 if (!isParticipant || wasPending) {
-                    this.notificationsService.sendMulticast(
+                    await this.notificationsService.sendMulticast(
                         hostTokens,
-                        'Invite Accepted',
-                        `${username} has accepted your invitation to "${event.title}"`,
-                        { type: NotificationCode.PARTICIPATION_ACCEPTED, eventId: String(eventId) }
+                        EVENT_NOTIFICATION_TITLES.participationAccepted,
+                        EVENT_NOTIFICATION_MESSAGES.participationAccepted(username, event.title),
+                        { type: NotificationCode.PARTICIPATION_ACCEPTED, eventId: String(eventId) },
                     );
                 } else {
-                    this.notificationsService.sendMulticast(
+                    await this.notificationsService.sendMulticast(
                         hostTokens,
-                        'Participation Updated',
-                        `${username} has updated their preferences for "${event.title}"`,
-                        { type: NotificationCode.PARTICIPATION_UPDATED, eventId: String(eventId) }
+                        EVENT_NOTIFICATION_TITLES.participationUpdated,
+                        EVENT_NOTIFICATION_MESSAGES.participationUpdated(username, event.title),
+                        { type: NotificationCode.PARTICIPATION_UPDATED, eventId: String(eventId) },
                     );
                 }
             }
-
-            return result;
-        } catch (e) {
-            throw e;
         }
+
+        return result;
     }
 
     async leave(eventId: number, userId: number) {
-        const event = await this.findOne(eventId);
+        const event = await this.findEventOrThrow(eventId);
 
         try {
             const result = await this.eventsRepo.leave(userId, eventId);
             await this.eventsRepo.deleteRideAssignmentsForUsers(eventId, [userId]);
 
-            const hostTokens = await this.eventsRepo.getUserTokens([event.host.id]);
-            if (hostTokens.length > 0 && event.host.id !== userId) {
-                const leavingUser = await this.eventsRepo.getUserById(userId);
-                const username = leavingUser?.username || 'A user';
-                this.notificationsService.sendMulticast(
-                    hostTokens,
-                    'Participation Cancelled',
-                    `${username} has cancelled their participation in "${event.title}"`,
-                    { type: NotificationCode.PARTICIPATION_CANCELLED, eventId: String(eventId) }
-                );
+            if (event.hostId !== userId) {
+                const hostTokens = await this.eventsRepo.getUserTokens([event.hostId]);
+
+                if (hostTokens.length > 0) {
+                    const leavingUser = await this.eventsRepo.getUserById(userId);
+                    const username = leavingUser?.username || 'A user';
+                    await this.notificationsService.sendMulticast(
+                        hostTokens,
+                        EVENT_NOTIFICATION_TITLES.participationCancelled,
+                        EVENT_NOTIFICATION_MESSAGES.participationCancelled(username, event.title),
+                        { type: NotificationCode.PARTICIPATION_CANCELLED, eventId: String(eventId) },
+                    );
+                }
             }
 
             return result;
@@ -239,26 +238,26 @@ export class EventsService {
     }
 
     async assignRide(eventId: number, passengerId: number, driverId: number | null, requestingUserId: number) {
-        const event = await this.eventsRepo.findOne(eventId);
-        if (!event) throw new NotFoundException(`Event with id ${eventId} not found`);
+        const event = await this.findEventOrThrow(eventId);
 
         const isHost = event.hostId === requestingUserId;
-        const passenger = (event as any).participants?.find((p: any) => p.userId === passengerId);
+        const passenger = this.getParticipant(event, passengerId);
 
-        if (!passenger) throw new NotFoundException(`Passenger with id ${passengerId} is not in this event`);
+        if (!passenger) {
+            throw new NotFoundException(`Passenger with id ${passengerId} is not in this event`);
+        }
 
-        const passengerAssignment = (event as any).rideAssignments?.find((assignment: any) => assignment.passengerId === passengerId);
+        const passengerAssignment = this.getRideAssignment(event, passengerId);
         const isCurrentDriver = passengerAssignment?.driverId === requestingUserId;
         const isAssigningToSelf = driverId === requestingUserId;
         const isUnassigningFromSelf = driverId === null && isCurrentDriver;
 
-        // Host can do anything. Drivers can only assign people to themselves or remove them from their own car.
         if (!isHost && !isAssigningToSelf && !isUnassigningFromSelf) {
             throw new ForbiddenException('You do not have permission to assign rides for this event');
         }
 
         if (driverId !== null) {
-            const driver = (event as any).participants?.find((p: any) => p.userId === driverId);
+            const driver = this.getParticipant(event, driverId);
             if (!driver) {
                 throw new NotFoundException(`Driver with id ${driverId} is not in this event`);
             }
@@ -270,68 +269,126 @@ export class EventsService {
 
         await this.eventsRepo.assignRide(eventId, passengerId, driverId);
 
-        // Notify passenger
-        if (driverId) {
-            this.notifyUserIds([passengerId], eventId, NotificationCode.EVENT_UPDATED, 'Ride Assigned', `You have been assigned a ride for "${event.title}"`);
+        if (driverId !== null) {
+            await this.notifyUserIds(
+                [passengerId],
+                eventId,
+                NotificationCode.EVENT_UPDATED,
+                EVENT_NOTIFICATION_TITLES.rideAssigned,
+                EVENT_NOTIFICATION_MESSAGES.rideAssigned(event.title),
+            );
         }
 
         return this.findOne(eventId);
     }
 
-    private mapToDto(event: any): EventResponseDto {
-        const hostDto: UserDto = {
-            id: event.host.id,
-            username: event.host.username,
-            profilePicture: event.host.profilePicture,
-        };
-
-        const participantsDto: EventParticipantDto[] = event.participants.map((p: any) => {
-            // Map attendance plus the separate ride assignment table back into the legacy response shape.
-            // This keeps the client contract stable while the storage model changes underneath it.
-            const rideAssignment = event.rideAssignments?.find((ride: any) => ride.passengerId === p.userId);
-
-            return {
-                id: p.user.id,
-                username: p.user.username,
-                profilePicture: p.user.profilePicture,
-                status: p.status,
-                wantsFood: p.wantsFood,
-                wantsWeed: p.wantsWeed,
-                wantsSleep: p.wantsSleep,
-                wantsAlcohol: p.wantsAlcohol,
-                wantsBeer: p.wantsBeer,
-                hasVehicle: p.hasVehicle,
-                vehicleSeats: p.vehicleSeats,
-                driverId: rideAssignment?.driverId,
-                driver: rideAssignment?.driver ? {
-                    id: rideAssignment.driver.id,
-                    username: rideAssignment.driver.username,
-                    profilePicture: rideAssignment.driver.profilePicture,
-                } : undefined,
-            };
-        });
+    private buildCreateEventInput(eventData: Omit<CreateEventDto, 'participants'>): Omit<Prisma.EventCreateInput, 'host'> {
+        const { startTime, endTime, ...rest } = eventData;
 
         return {
-            id: event.id,
-            title: event.title,
-            description: event.description,
-            location: event.location,
-            startTime: event.startTime,
-            endTime: event.endTime ?? null,
-            host: hostDto,
-            participants: participantsDto,
-            isOpen: event.isOpen,
-            hasFood: event.hasFood,
-            hasWeed: event.hasWeed,
-            hasSleep: event.hasSleep,
-            hasAlcohol: event.hasAlcohol,
-            hasBeer: event.hasBeer,
-            foodPrice: event.foodPrice,
-            weedPrice: event.weedPrice,
-            sleepPrice: event.sleepPrice,
-            alcoholPrice: event.alcoholPrice,
-            beerPrice: event.beerPrice
+            ...rest,
+            startTime: new Date(startTime),
+            endTime: endTime ? new Date(endTime) : null,
         };
     }
-}
 
+    private buildUpdateEventInput(eventData: Omit<UpdateEventDto, 'participants'>): Prisma.EventUpdateInput {
+        const { startTime, endTime, ...rest } = eventData;
+        const updateData: Prisma.EventUpdateInput = { ...rest };
+
+        if (startTime !== undefined) {
+            updateData.startTime = new Date(startTime);
+        }
+
+        if (endTime !== undefined) {
+            updateData.endTime = endTime ? new Date(endTime) : null;
+        }
+
+        return updateData;
+    }
+
+    private buildParticipantsUpdate(
+        toAdd: number[],
+        toRemove: number[],
+    ): Prisma.EventUpdateInput['participants'] | undefined {
+        const participantsUpdate: NonNullable<Prisma.EventUpdateInput['participants']> = {};
+
+        if (toRemove.length > 0) {
+            participantsUpdate.deleteMany = { userId: { in: toRemove } };
+        }
+
+        if (toAdd.length > 0) {
+            participantsUpdate.create = toAdd.map(userId => ({
+                userId,
+                status: InviteStatus.PENDING,
+            }));
+        }
+
+        return Object.keys(participantsUpdate).length > 0 ? participantsUpdate : undefined;
+    }
+
+    private diffParticipantIds(existingParticipantIds: number[], nextParticipantIds: number[]) {
+        const existingIds = new Set(existingParticipantIds);
+        const nextIds = new Set(nextParticipantIds);
+
+        return {
+            toAdd: nextParticipantIds.filter(userId => !existingIds.has(userId)),
+            toRemove: existingParticipantIds.filter(userId => !nextIds.has(userId)),
+        };
+    }
+
+    private getParticipantUserIds(event: EventWithRelations): number[] {
+        return event.participants.map(participant => participant.userId);
+    }
+
+    private getParticipant(event: EventWithRelations, userId: number) {
+        return event.participants.find(participant => participant.userId === userId);
+    }
+
+    private getRideAssignment(event: EventWithRelations, passengerId: number) {
+        return event.rideAssignments.find(assignment => assignment.passengerId === passengerId);
+    }
+
+    private normalizeUserIds(userIds: number[]): number[] {
+        return [...new Set(userIds.map(userId => Number(userId)).filter(Number.isFinite))];
+    }
+
+    private async findEventOrThrow(id: number): Promise<EventWithRelations> {
+        const event = await this.eventsRepo.findOne(id);
+        if (!event) {
+            throw new NotFoundException(`Event with id ${id} not found`);
+        }
+
+        return event;
+    }
+
+    private async notifyParticipants(
+        eventId: number,
+        type: NotificationCode,
+        title: string,
+        body: string,
+        status?: InviteStatus,
+    ) {
+        const tokens = status
+            ? await this.eventsRepo.getParticipantTokensByStatus(eventId, status)
+            : await this.eventsRepo.getParticipantTokens(eventId);
+
+        if (tokens.length > 0) {
+            await this.notificationsService.sendMulticast(tokens, title, body, { type, eventId: String(eventId) });
+        }
+    }
+
+    private async notifyUserIds(
+        userIds: number[],
+        eventId: number,
+        type: NotificationCode,
+        title: string,
+        body: string,
+    ) {
+        const tokens = await this.eventsRepo.getUserTokens(userIds);
+
+        if (tokens.length > 0) {
+            await this.notificationsService.sendMulticast(tokens, title, body, { type, eventId: String(eventId) });
+        }
+    }
+}
