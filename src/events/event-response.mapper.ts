@@ -43,6 +43,7 @@ export function mapEventToDto(event: EventWithRelations): EventResponseDto {
         host: mapUserDto(event.host),
         participants: participantsDto,
         isOpen: event.isOpen,
+        isPrivate: event.isPrivate,
         hasFood: event.hasFood,
         hasWeed: event.hasWeed,
         hasSleep: event.hasSleep,

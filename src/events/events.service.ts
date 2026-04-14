@@ -59,13 +59,13 @@ export class EventsService {
         }
     }
 
-    async findAll(): Promise<EventResponseDto[]> {
-        const events = await this.eventsRepo.findAll();
+    async findAll(userId?: number): Promise<EventResponseDto[]> {
+        const events = await this.eventsRepo.findAll(userId);
         return events.map(event => mapEventToDto(event));
     }
 
-    async findOne(id: number): Promise<EventResponseDto> {
-        const event = await this.eventsRepo.findOne(id);
+    async findOne(id: number, userId?: number): Promise<EventResponseDto> {
+        const event = await this.eventsRepo.findOne(id, userId);
         if (!event) {
             throw new NotFoundException(`Event with id ${id} not found`);
         }
@@ -74,7 +74,7 @@ export class EventsService {
     }
 
     async remove(id: number, userId: number) {
-        const event = await this.findEventOrThrow(id);
+        const event = await this.findEventOrThrow(id, userId);
 
         if (event.hostId !== userId) {
             throw new ForbiddenException('Only the host can delete this event');
@@ -91,7 +91,7 @@ export class EventsService {
     }
 
     async update(id: number, updateEventDto: UpdateEventDto, userId: number): Promise<EventResponseDto> {
-        const event = await this.findEventOrThrow(id);
+        const event = await this.findEventOrThrow(id, userId);
 
         if (event.hostId !== userId) {
             throw new ForbiddenException('Only the host can update this event');
@@ -145,7 +145,7 @@ export class EventsService {
     }
 
     async invite(eventId: number, username: string, userId: number) {
-        const event = await this.findEventOrThrow(eventId);
+        const event = await this.findEventOrThrow(eventId, userId);
 
         if (event.hostId !== userId) {
             throw new ForbiddenException('Only the host can invite users');
@@ -167,7 +167,7 @@ export class EventsService {
     }
 
     async join(eventId: number, userId: number, participateDto: ParticipateDto) {
-        const event = await this.findEventOrThrow(eventId);
+        const event = await this.findEventOrThrow(eventId, userId);
         const participant = this.getParticipant(event, userId);
         const isParticipant = !!participant;
 
@@ -207,7 +207,7 @@ export class EventsService {
     }
 
     async leave(eventId: number, userId: number) {
-        const event = await this.findEventOrThrow(eventId);
+        const event = await this.findEventOrThrow(eventId, userId);
 
         try {
             const result = await this.eventsRepo.leave(userId, eventId);
@@ -238,7 +238,7 @@ export class EventsService {
     }
 
     async assignRide(eventId: number, passengerId: number, driverId: number | null, requestingUserId: number) {
-        const event = await this.findEventOrThrow(eventId);
+        const event = await this.findEventOrThrow(eventId, requestingUserId);
 
         const isHost = event.hostId === requestingUserId;
         const passenger = this.getParticipant(event, passengerId);
@@ -353,8 +353,8 @@ export class EventsService {
         return [...new Set(userIds.map(userId => Number(userId)).filter(Number.isFinite))];
     }
 
-    private async findEventOrThrow(id: number): Promise<EventWithRelations> {
-        const event = await this.eventsRepo.findOne(id);
+    private async findEventOrThrow(id: number, userId?: number): Promise<EventWithRelations> {
+        const event = await this.eventsRepo.findOne(id, userId);
         if (!event) {
             throw new NotFoundException(`Event with id ${id} not found`);
         }

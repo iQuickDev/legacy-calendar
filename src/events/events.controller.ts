@@ -22,19 +22,23 @@ export class EventsController {
         return this.eventsService.create(createEventDto, req.user.userId);
     }
 
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'Get all events' })
     @ApiResponse({ status: 200, description: 'Return all events', type: [EventResponseDto] })
-    findAll() {
-        return this.eventsService.findAll();
+    findAll(@Request() req) {
+        return this.eventsService.findAll(req.user.userId);
     }
 
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'Get an event by ID' })
     @ApiResponse({ status: 200, description: 'Return event', type: EventResponseDto })
     @ApiResponse({ status: 404, description: 'Event not found' })
-    findOne(@Param('id', ParseIntPipe) id: number) {
-        return this.eventsService.findOne(id);
+    findOne(@Param('id', ParseIntPipe) id: number, @Request() req) {
+        return this.eventsService.findOne(id, req.user.userId);
     }
 
     @ApiBearerAuth()

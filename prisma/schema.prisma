@@ -45,6 +45,7 @@ model Event {
   hasBeer      Boolean      @default(false)
   sleepPrice   Float?
   weedPrice    Float?
+  isPrivate    Boolean      @default(false)
   participants Attendance[]
   rideAssignments RideAssignment[]
   host         User         @relation("EventHost", fields: [hostId], references: [id])

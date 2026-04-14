@@ -37,15 +37,29 @@ export class EventsRepository {
         return this.prisma.user.findUnique({ where: { id } });
     }
 
-    async findAll(): Promise<EventWithRelations[]> {
+    async findAll(userId?: number): Promise<EventWithRelations[]> {
         return this.prisma.event.findMany({
+            where: {
+                OR: [
+                    { isPrivate: false },
+                    { hostId: userId },
+                    { participants: { some: { userId } } },
+                ],
+            },
             include: EVENT_INCLUDE,
         });
     }
 
-    async findOne(id: number): Promise<EventWithRelations | null> {
-        return this.prisma.event.findUnique({
-            where: { id },
+    async findOne(id: number, userId?: number): Promise<EventWithRelations | null> {
+        return this.prisma.event.findFirst({
+            where: {
+                id,
+                OR: [
+                    { isPrivate: false },
+                    { hostId: userId },
+                    { participants: { some: { userId } } },
+                ],
+            },
             include: EVENT_INCLUDE,
         });
     }

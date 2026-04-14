@@ -64,6 +64,9 @@ export class EventResponseDto {
     @ApiProperty({ example: true, description: 'Whether the event is open for spontaneous joining' })
     isOpen: boolean;
 
+    @ApiProperty({ example: false, description: 'Whether the event is private' })
+    isPrivate: boolean;
+
     @ApiProperty({ example: true, description: 'Event has food' })
     hasFood?: boolean;
 
