@@ -253,7 +253,11 @@ export class EventsService {
         const isUnassigningFromSelf = driverId === null && isCurrentDriver;
 
         if (!isHost && !isAssigningToSelf && !isUnassigningFromSelf) {
-            throw new ForbiddenException('You do not have permission to assign rides for this event');
+            if (driverId !== null) {
+                throw new ForbiddenException('Only the host or the driver of the vehicle can assign passengers to this car');
+            } else {
+                throw new ForbiddenException('Only the host or the current driver can remove passengers from this car');
+            }
         }
 
         if (driverId !== null) {
