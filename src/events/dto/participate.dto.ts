@@ -1,6 +1,6 @@
 
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsOptional } from 'class-validator';
+import { IsBoolean, IsOptional, Max, Min } from 'class-validator';
 
 export class ParticipateDto {
     @ApiProperty({ example: true, description: 'Whether the user wants food', required: false })
@@ -34,8 +34,10 @@ export class ParticipateDto {
     hasVehicle?: boolean;
 
 
-    @ApiProperty({ example: 4, description: 'Number of available seats', required: false })
+    @ApiProperty({ example: 4, description: 'Number of total seats', required: false })
     @IsOptional()
+    @Min(1)
+    @Max(9)
     vehicleSeats?: number;
 }
 
