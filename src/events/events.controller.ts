@@ -1,12 +1,25 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Request, ParseIntPipe, Patch } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Post,
+    Body,
+    Param,
+    Delete,
+    UseGuards,
+    Request,
+    ParseIntPipe,
+    Patch,
+    Query
+} from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { ParticipateDto } from './dto/participate.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { EventResponseDto } from './dto/event-response.dto';
 import { type RequestWithUser } from '../auth/interfaces/request-with-user.interface';
+import { FindEventsQueryDto } from './dto/find-events-query.dto';
 
 @ApiTags('events')
 @Controller('events')
@@ -26,10 +39,29 @@ export class EventsController {
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
     @Get()
-    @ApiOperation({ summary: 'Get all events' })
-    @ApiResponse({ status: 200, description: 'Return all events', type: [EventResponseDto] })
-    findAll(@Request() req: RequestWithUser) {
-        return this.eventsService.findAll(req.user.userId);
+    @ApiOperation({ summary: 'Get events for a visible calendar range' })
+    @ApiQuery({
+        name: 'start',
+        required: true,
+        type: String,
+        example: '2026-04-01T00:00:00.000Z',
+        description: 'Start of the visible calendar range, inclusive'
+    })
+    @ApiQuery({
+        name: 'end',
+        required: true,
+        type: String,
+        example: '2026-05-03T23:59:59.999Z',
+        description: 'End of the visible calendar range, inclusive'
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Return events in the requested calendar range',
+        type: EventResponseDto,
+        isArray: true
+    })
+    findAll(@Request() req: RequestWithUser, @Query() query: FindEventsQueryDto) {
+        return this.eventsService.findAll(req.user.userId as number, query);
     }
 
     @ApiBearerAuth()

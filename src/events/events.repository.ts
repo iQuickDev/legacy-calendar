@@ -37,12 +37,13 @@ export class EventsRepository {
         return this.prisma.user.findUnique({ where: { id } });
     }
 
-    async findAll(userId?: number): Promise<EventWithRelations[]> {
+    async findAll(userId: number, start: Date, end: Date): Promise<EventWithRelations[]> {
         return this.prisma.event.findMany({
             where: {
-                OR: [{ isPrivate: false }, { hostId: userId }, { participants: { some: { userId } } }]
+                AND: [this.buildVisibleEventsWhere(userId), { startTime: { gte: start, lte: end } }]
             },
-            include: EVENT_INCLUDE
+            include: EVENT_INCLUDE,
+            orderBy: [{ startTime: 'asc' }, { id: 'asc' }]
         });
     }
 
@@ -50,7 +51,7 @@ export class EventsRepository {
         return this.prisma.event.findFirst({
             where: {
                 id,
-                OR: [{ isPrivate: false }, { hostId: userId }, { participants: { some: { userId } } }]
+                ...this.buildVisibleEventsWhere(userId)
             },
             include: EVENT_INCLUDE
         });
@@ -194,5 +195,15 @@ export class EventsRepository {
         });
 
         return tokens.map((t) => t.token);
+    }
+
+    private buildVisibleEventsWhere(userId?: number): Prisma.EventWhereInput {
+        const visibilityClauses: Prisma.EventWhereInput[] = [{ isPrivate: false }];
+
+        if (userId !== undefined) {
+            visibilityClauses.push({ hostId: userId }, { participants: { some: { userId } } });
+        }
+
+        return { OR: visibilityClauses };
     }
 }

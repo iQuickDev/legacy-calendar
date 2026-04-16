@@ -1,9 +1,10 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, InviteStatus } from '@prisma/client';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { ParticipateDto } from './dto/participate.dto';
 import { EventResponseDto } from './dto/event-response.dto';
+import { FindEventsQueryDto } from './dto/find-events-query.dto';
 import { EventsRepository, EventWithRelations } from './events.repository';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCode } from '../notifications/notification-codes';
@@ -59,8 +60,12 @@ export class EventsService {
         }
     }
 
-    async findAll(userId?: number): Promise<EventResponseDto[]> {
-        const events = await this.eventsRepo.findAll(userId);
+    async findAll(userId: number, query: FindEventsQueryDto): Promise<EventResponseDto[]> {
+        if (query.start > query.end) {
+            throw new BadRequestException('start must be before or equal to end');
+        }
+
+        const events = await this.eventsRepo.findAll(userId, query.start, query.end);
         return events.map((event) => mapEventToDto(event));
     }
 
@@ -285,7 +290,7 @@ export class EventsService {
             );
         }
 
-        return this.findOne(eventId);
+        return this.findOne(eventId, requestingUserId);
     }
 
     private buildCreateEventInput(
