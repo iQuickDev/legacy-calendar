@@ -1,5 +1,6 @@
 import { IsBoolean, IsDateString, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsEventStartTimeWithinAllowedRange } from '../validators/is-event-start-time-within-allowed-range.validator';
 
 export class CreateEventDto {
     @ApiProperty({ example: 'Team Standup', description: 'Title of the event' })
@@ -17,13 +18,22 @@ export class CreateEventDto {
     @IsOptional()
     location?: string;
 
-    @ApiProperty({ example: '2026-02-04T10:00:00Z', description: 'Start time (ISO 8601)' })
+    @ApiProperty({
+        example: '2026-02-04T10:00:00Z',
+        description: 'Start time (ISO 8601). Must be today or within 1 year from now.'
+    })
     @IsDateString()
+    @IsEventStartTimeWithinAllowedRange()
     @IsNotEmpty()
     startTime: string;
 
-    @ApiProperty({ example: '2026-02-04T11:00:00Z', description: 'End time (ISO 8601)', required: false })
+    @ApiProperty({
+        example: '2026-02-04T11:00:00Z',
+        description: 'End time (ISO 8601). Must be today or within 1 year from now.',
+        required: false
+    })
     @IsDateString()
+    @IsEventStartTimeWithinAllowedRange()
     @IsOptional()
     endTime?: string;
 
