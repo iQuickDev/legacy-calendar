@@ -1,4 +1,5 @@
 import { ExecutionContext, Injectable } from '@nestjs/common';
+import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -9,13 +10,13 @@ export class UserAuthGuard extends JwtAuthGuard {
     }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        const request = context.switchToHttp().getRequest();
+        const request = context.switchToHttp().getRequest<Request>();
 
         const bypassHeader = request.headers['x-bypass'];
         const bypassKey = this.configService.get<string>('BYPASS_KEY');
 
         if (bypassHeader && bypassHeader === bypassKey) {
-            request.isBypass = true;
+            (request as Record<string, any>).isBypass = true;
             return true;
         }
 

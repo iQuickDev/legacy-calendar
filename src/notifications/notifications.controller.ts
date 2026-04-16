@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NotificationsService } from './notifications.service';
 import { SubscribeNotificationDto } from './dto/subscribe-notification.dto';
+import { type RequestWithUser } from '../auth/interfaces/request-with-user.interface';
 
 @ApiTags('notifications')
 @Controller('notifications')
@@ -14,8 +15,8 @@ export class NotificationsController {
     @Post('subscribe')
     @ApiOperation({ summary: 'Subscribe device to notifications' })
     @ApiResponse({ status: 201, description: 'Subscribed successfully' })
-    async subscribe(@Request() req, @Body() body: SubscribeNotificationDto): Promise<void> {
-        await this.notificationsService.subscribe(req.user.userId, body.token);
+    async subscribe(@Request() req: RequestWithUser, @Body() body: SubscribeNotificationDto): Promise<void> {
+        await this.notificationsService.subscribe(req.user.userId as number, body.token);
     }
 
     @ApiBearerAuth()

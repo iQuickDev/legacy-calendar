@@ -54,11 +54,16 @@ function getHttpsOptions(logger: Logger) {
                 logger.warn(`SSL paths provided but files not found: ${missing.join(', ')}. Falling back to HTTP.`);
             }
         } catch (error) {
-            logger.error('Error loading SSL certificates, falling back to HTTP.', error.stack);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : undefined;
+            logger.error(`Error loading SSL certificates, falling back to HTTP. ${errorMessage}`, errorStack);
         }
     }
 
     return undefined;
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+    const logger = new Logger('Bootstrap');
+    logger.error('Error starting application', err instanceof Error ? err.stack : err);
+});

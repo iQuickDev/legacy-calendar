@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Res, StreamableFile, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Res, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { join } from 'path';
@@ -9,7 +9,7 @@ export class UploadsController {
     constructor(private configService: ConfigService) {}
 
     @Get(':category/:filename')
-    async getUpload(@Param('category') category: string, @Param('filename') filename: string, @Res() res: Response) {
+    getUpload(@Param('category') category: string, @Param('filename') filename: string, @Res() res: Response) {
         const filePath = join(process.cwd(), 'uploads', category, filename);
 
         if (existsSync(filePath)) {

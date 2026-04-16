@@ -6,6 +6,7 @@ import { ParticipateDto } from './dto/participate.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { EventResponseDto } from './dto/event-response.dto';
+import { type RequestWithUser } from '../auth/interfaces/request-with-user.interface';
 
 @ApiTags('events')
 @Controller('events')
@@ -18,8 +19,8 @@ export class EventsController {
     @ApiOperation({ summary: 'Create a new event' })
     @ApiResponse({ status: 201, description: 'Event created successfully', type: EventResponseDto })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
-    create(@Body() createEventDto: CreateEventDto, @Request() req) {
-        return this.eventsService.create(createEventDto, req.user.userId);
+    create(@Body() createEventDto: CreateEventDto, @Request() req: RequestWithUser) {
+        return this.eventsService.create(createEventDto, req.user.userId as number);
     }
 
     @ApiBearerAuth()
@@ -27,7 +28,7 @@ export class EventsController {
     @Get()
     @ApiOperation({ summary: 'Get all events' })
     @ApiResponse({ status: 200, description: 'Return all events', type: [EventResponseDto] })
-    findAll(@Request() req) {
+    findAll(@Request() req: RequestWithUser) {
         return this.eventsService.findAll(req.user.userId);
     }
 
@@ -37,7 +38,7 @@ export class EventsController {
     @ApiOperation({ summary: 'Get an event by ID' })
     @ApiResponse({ status: 200, description: 'Return event', type: EventResponseDto })
     @ApiResponse({ status: 404, description: 'Event not found' })
-    findOne(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    findOne(@Param('id', ParseIntPipe) id: number, @Request() req: RequestWithUser) {
         return this.eventsService.findOne(id, req.user.userId);
     }
 
@@ -48,8 +49,8 @@ export class EventsController {
     @ApiResponse({ status: 200, description: 'Event deleted' })
     @ApiResponse({ status: 403, description: 'Forbidden - Only host can delete' })
     @ApiResponse({ status: 404, description: 'Event not found' })
-    remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
-        return this.eventsService.remove(id, req.user.userId);
+    remove(@Param('id', ParseIntPipe) id: number, @Request() req: RequestWithUser) {
+        return this.eventsService.remove(id, req.user.userId as number);
     }
 
     @ApiBearerAuth()
@@ -58,8 +59,12 @@ export class EventsController {
     @ApiOperation({ summary: 'Update an event' })
     @ApiResponse({ status: 200, description: 'Event updated', type: EventResponseDto })
     @ApiResponse({ status: 403, description: 'Forbidden - Only host can update' })
-    update(@Param('id', ParseIntPipe) id: number, @Body() updateEventDto: UpdateEventDto, @Request() req) {
-        return this.eventsService.update(id, updateEventDto, req.user.userId);
+    update(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() updateEventDto: UpdateEventDto,
+        @Request() req: RequestWithUser
+    ) {
+        return this.eventsService.update(id, updateEventDto, req.user.userId as number);
     }
 
     @ApiBearerAuth()
@@ -67,8 +72,8 @@ export class EventsController {
     @Post(':id/invite')
     @ApiOperation({ summary: 'Invite a user to an event' })
     @ApiResponse({ status: 201, description: 'User invited' })
-    invite(@Param('id', ParseIntPipe) id: number, @Body('username') username: string, @Request() req) {
-        return this.eventsService.invite(id, username, req.user.userId);
+    invite(@Param('id', ParseIntPipe) id: number, @Body('username') username: string, @Request() req: RequestWithUser) {
+        return this.eventsService.invite(id, username, req.user.userId as number);
     }
 
     @ApiBearerAuth()
@@ -78,8 +83,12 @@ export class EventsController {
     @ApiResponse({ status: 201, description: 'Joined event successfully' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Event not found' })
-    join(@Param('id', ParseIntPipe) id: number, @Body() participateDto: ParticipateDto, @Request() req) {
-        return this.eventsService.join(id, req.user.userId, participateDto);
+    join(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() participateDto: ParticipateDto,
+        @Request() req: RequestWithUser
+    ) {
+        return this.eventsService.join(id, req.user.userId as number, participateDto);
     }
 
     @ApiBearerAuth()
@@ -89,8 +98,8 @@ export class EventsController {
     @ApiResponse({ status: 200, description: 'Left event successfully' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Event or participation not found' })
-    leave(@Param('id', ParseIntPipe) id: number, @Request() req) {
-        return this.eventsService.leave(id, req.user.userId);
+    leave(@Param('id', ParseIntPipe) id: number, @Request() req: RequestWithUser) {
+        return this.eventsService.leave(id, req.user.userId as number);
     }
 
     @ApiBearerAuth()
@@ -100,8 +109,12 @@ export class EventsController {
     @ApiResponse({ status: 200, description: 'Participation updated successfully' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Event not found' })
-    editParticipation(@Param('id', ParseIntPipe) id: number, @Body() participateDto: ParticipateDto, @Request() req) {
-        return this.eventsService.join(id, req.user.userId, participateDto);
+    editParticipation(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() participateDto: ParticipateDto,
+        @Request() req: RequestWithUser
+    ) {
+        return this.eventsService.join(id, req.user.userId as number, participateDto);
     }
 
     @ApiBearerAuth()
@@ -113,8 +126,8 @@ export class EventsController {
         @Param('id', ParseIntPipe) id: number,
         @Body('passengerId') passengerId: number,
         @Body('driverId') driverId: number | null,
-        @Request() req
+        @Request() req: RequestWithUser
     ) {
-        return this.eventsService.assignRide(id, passengerId, driverId, req.user.userId);
+        return this.eventsService.assignRide(id, passengerId, driverId, req.user.userId as number);
     }
 }

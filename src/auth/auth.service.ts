@@ -6,7 +6,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserDto } from '../users/dto/user.dto';
 import { UsersService } from '../users/users.service';
 
-type AuthenticatedUser = Omit<UserModel, 'password'>;
+export type AuthenticatedUser = Omit<UserModel, 'password'>;
 
 @Injectable()
 export class AuthService {
@@ -18,14 +18,14 @@ export class AuthService {
     async validateUser(username: string, pass: string): Promise<AuthenticatedUser | null> {
         const user = await this.usersService.findOneByUsername(username);
         if (user && (await bcrypt.compare(pass, user.password))) {
-            const { password, ...result } = user;
+            const { password: _password, ...result } = user;
             return result;
         }
 
         return null;
     }
 
-    async login(user: AuthenticatedUser) {
+    login(user: AuthenticatedUser) {
         const payload = { username: user.username, sub: user.id };
         return {
             access_token: this.jwtService.sign(payload)
