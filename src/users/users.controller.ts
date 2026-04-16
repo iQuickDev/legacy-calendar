@@ -14,7 +14,7 @@ import {
     Request,
     UseGuards,
     UseInterceptors,
-    UploadedFile,
+    UploadedFile
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -36,7 +36,7 @@ type AuthedRequest = ExpressRequest & {
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
-    constructor(private readonly usersService: UsersService) { }
+    constructor(private readonly usersService: UsersService) {}
 
     @Post()
     @UseGuards(BypassGuard)
@@ -61,7 +61,11 @@ export class UsersController {
     @UseInterceptors(FileInterceptor('file'))
     @ApiOperation({ summary: 'Upload profile picture' })
     @ApiBearerAuth()
-    @ApiHeader({ name: 'X-Bypass', description: 'Bypass key for user operations (optional if using JWT)', required: false })
+    @ApiHeader({
+        name: 'X-Bypass',
+        description: 'Bypass key for user operations (optional if using JWT)',
+        required: false
+    })
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         schema: {
@@ -69,10 +73,10 @@ export class UsersController {
             properties: {
                 file: {
                     type: 'string',
-                    format: 'binary',
-                },
-            },
-        },
+                    format: 'binary'
+                }
+            }
+        }
     })
     @ApiResponse({ status: 200, description: 'Profile picture uploaded' })
     @ApiResponse({ status: 400, description: 'Invalid file' })
@@ -82,16 +86,16 @@ export class UsersController {
         @UploadedFile(
             new ParseFilePipeBuilder()
                 .addFileTypeValidator({
-                    fileType: /image\/(jpg|jpeg|png|webp)$/,
+                    fileType: /image\/(jpg|jpeg|png|webp)$/
                 })
                 .addMaxSizeValidator({
-                    maxSize: 10 * 1024 * 1024,
+                    maxSize: 10 * 1024 * 1024
                 })
                 .build({
-                    errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
-                }),
+                    errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY
+                })
         )
-        file: Express.Multer.File,
+        file: Express.Multer.File
     ) {
         const targetUserId = this.resolveTargetUserId(req, userId);
         this.ensureOwnProfilePictureAccess(req, targetUserId, 'update');
@@ -103,7 +107,11 @@ export class UsersController {
     @UseGuards(UserAuthGuard)
     @ApiOperation({ summary: 'Remove profile picture' })
     @ApiBearerAuth()
-    @ApiHeader({ name: 'X-Bypass', description: 'Bypass key for user operations (optional if using JWT)', required: false })
+    @ApiHeader({
+        name: 'X-Bypass',
+        description: 'Bypass key for user operations (optional if using JWT)',
+        required: false
+    })
     @ApiResponse({ status: 200, description: 'Profile picture removed' })
     removeProfilePicture(@Body('userId') userId: string | undefined, @Request() req: AuthedRequest) {
         const targetUserId = this.resolveTargetUserId(req, userId);
@@ -143,11 +151,7 @@ export class UsersController {
     }
 
     private resolveTargetUserId(req: AuthedRequest, userId?: string): number {
-        const targetUserId = req.isBypass
-            ? Number(userId)
-            : userId
-                ? Number(userId)
-                : req.user?.userId;
+        const targetUserId = req.isBypass ? Number(userId) : userId ? Number(userId) : req.user?.userId;
 
         if (typeof targetUserId !== 'number' || !Number.isInteger(targetUserId)) {
             throw new BadRequestException('Invalid or missing userId');

@@ -12,8 +12,8 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 export class AuthController {
     constructor(
         private authService: AuthService,
-        private usersService: UsersService,
-    ) { }
+        private usersService: UsersService
+    ) {}
 
     @UseGuards(AuthGuard('local'))
     @Post('login')

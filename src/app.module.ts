@@ -11,16 +11,16 @@ import { PrismaModule } from './prisma/prisma.module';
 import { UploadsModule } from './uploads/uploads.module';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    PrismaModule,
-    AuthModule,
-    UsersModule,
-    EventsModule,
-    NotificationsModule,
-    UploadsModule,
-  ],
-  controllers: [AppController],
-  providers: [AppService],
+    imports: [
+        ConfigModule.forRoot({ isGlobal: true }),
+        PrismaModule,
+        AuthModule,
+        UsersModule,
+        EventsModule,
+        NotificationsModule,
+        UploadsModule
+    ],
+    controllers: [AppController],
+    providers: [AppService]
 })
-export class AppModule { }
+export class AppModule {}

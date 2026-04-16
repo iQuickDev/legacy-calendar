@@ -37,7 +37,11 @@ export class CreateEventDto {
     @IsBoolean()
     isOpen?: boolean;
 
-    @ApiProperty({ example: false, description: 'Whether the event is private (visible only to invitees)', required: false })
+    @ApiProperty({
+        example: false,
+        description: 'Whether the event is private (visible only to invitees)',
+        required: false
+    })
     @IsOptional()
     @IsBoolean()
     isPrivate?: boolean;

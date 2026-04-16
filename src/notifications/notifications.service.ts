@@ -9,7 +9,7 @@ export class NotificationsService implements OnModuleInit {
     private readonly logger = new Logger(NotificationsService.name);
     private initialized = false;
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     onModuleInit() {
         this.initializeFirebase();
@@ -21,7 +21,7 @@ export class NotificationsService implements OnModuleInit {
         if (fs.existsSync(firebaseConfigPath)) {
             try {
                 admin.initializeApp({
-                    credential: admin.credential.cert(firebaseConfigPath),
+                    credential: admin.credential.cert(firebaseConfigPath)
                 });
                 this.initialized = true;
                 this.logger.log('Firebase Admin initialized successfully using firebase.json');
@@ -30,27 +30,27 @@ export class NotificationsService implements OnModuleInit {
             }
         } else {
             this.logger.warn(
-                'Firebase credentials file (firebase.json) not found at root. Notifications will not be sent.',
+                'Firebase credentials file (firebase.json) not found at root. Notifications will not be sent.'
             );
         }
     }
 
     async subscribe(userId: number, token: string): Promise<void> {
         await this.prisma.fcmToken.deleteMany({
-            where: { token },
+            where: { token }
         });
 
         await this.prisma.fcmToken.create({
             data: {
                 token,
-                userId,
-            },
+                userId
+            }
         });
     }
 
     async unsubscribe(token: string): Promise<void> {
         await this.prisma.fcmToken.deleteMany({
-            where: { token },
+            where: { token }
         });
     }
 
@@ -64,7 +64,7 @@ export class NotificationsService implements OnModuleInit {
             await admin.messaging().send({
                 token,
                 notification: { title, body },
-                data,
+                data
             });
             this.logger.log(`Notification sent to ${token}`);
         } catch (error) {
@@ -81,11 +81,9 @@ export class NotificationsService implements OnModuleInit {
             const response = await admin.messaging().sendEachForMulticast({
                 tokens,
                 notification: { title, body },
-                data,
+                data
             });
-            this.logger.log(
-                `Multicast sent: ${response.successCount} success, ${response.failureCount} failure`,
-            );
+            this.logger.log(`Multicast sent: ${response.successCount} success, ${response.failureCount} failure`);
         } catch (error) {
             this.logger.error('Failed to send multicast notifications', error);
         }

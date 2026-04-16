@@ -5,11 +5,11 @@ describe('EventsService.assignRide', () => {
     const eventsRepo = {
         findOne: jest.fn(),
         assignRide: jest.fn(),
-        getUserTokens: jest.fn().mockResolvedValue([]),
+        getUserTokens: jest.fn().mockResolvedValue([])
     } as any;
 
     const notificationsService = {
-        sendMulticast: jest.fn(),
+        sendMulticast: jest.fn()
     } as any;
 
     let service: EventsService;
@@ -25,9 +25,9 @@ describe('EventsService.assignRide', () => {
             hostId: 10,
             participants: [
                 { userId: 20, hasVehicle: false },
-                { userId: 30, hasVehicle: true },
+                { userId: 30, hasVehicle: true }
             ],
-            rideAssignments: [],
+            rideAssignments: []
         });
         eventsRepo.assignRide.mockResolvedValue({ ok: true });
 
@@ -42,11 +42,9 @@ describe('EventsService.assignRide', () => {
             hostId: 10,
             participants: [
                 { userId: 20, hasVehicle: false },
-                { userId: 30, hasVehicle: true },
+                { userId: 30, hasVehicle: true }
             ],
-            rideAssignments: [
-                { passengerId: 20, driverId: 30 },
-            ],
+            rideAssignments: [{ passengerId: 20, driverId: 30 }]
         });
         eventsRepo.assignRide.mockResolvedValue({ ok: true });
 
@@ -61,11 +59,9 @@ describe('EventsService.assignRide', () => {
             hostId: 10,
             participants: [
                 { userId: 20, hasVehicle: false },
-                { userId: 30, hasVehicle: true },
+                { userId: 30, hasVehicle: true }
             ],
-            rideAssignments: [
-                { passengerId: 20, driverId: 30 },
-            ],
+            rideAssignments: [{ passengerId: 20, driverId: 30 }]
         });
 
         await expect(service.assignRide(1, 20, null, 40)).rejects.toBeInstanceOf(ForbiddenException);
@@ -78,7 +74,7 @@ describe('EventsService.assignRide', () => {
             id: 1,
             hostId: 10,
             participants: [],
-            rideAssignments: [],
+            rideAssignments: []
         });
 
         await expect(service.assignRide(1, 20, null, 10)).rejects.toBeInstanceOf(NotFoundException);

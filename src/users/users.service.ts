@@ -13,14 +13,14 @@ import { UsersRepository } from './users.repository';
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
 
-    constructor(private readonly usersRepo: UsersRepository) { }
+    constructor(private readonly usersRepo: UsersRepository) {}
 
     async create(createUserDto: CreateUserDto): Promise<UserDto> {
         try {
             const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
             return await this.usersRepo.create({
                 username: createUserDto.username,
-                password: hashedPassword,
+                password: hashedPassword
             });
         } catch (error) {
             this.throwFriendlyUserError(error, 'Username already taken');
@@ -82,10 +82,7 @@ export class UsersService {
         const filename = `${id}.webp`;
         const filePath = path.join(uploadDir, filename);
 
-        await sharp(file.buffer)
-            .resize(128, 128)
-            .webp()
-            .toFile(filePath);
+        await sharp(file.buffer).resize(128, 128).webp().toFile(filePath);
 
         const publicUrl = `/uploads/profile-pictures/${filename}`;
         return this.usersRepo.update(id, { profilePicture: publicUrl });

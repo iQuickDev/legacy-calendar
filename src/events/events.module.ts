@@ -8,6 +8,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
 @Module({
     imports: [PrismaModule, NotificationsModule],
     controllers: [EventsController],
-    providers: [EventsService, EventsRepository],
+    providers: [EventsService, EventsRepository]
 })
-export class EventsModule { }
+export class EventsModule {}

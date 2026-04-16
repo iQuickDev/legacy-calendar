@@ -7,7 +7,7 @@ import { SubscribeNotificationDto } from './dto/subscribe-notification.dto';
 @ApiTags('notifications')
 @Controller('notifications')
 export class NotificationsController {
-    constructor(private readonly notificationsService: NotificationsService) { }
+    constructor(private readonly notificationsService: NotificationsService) {}
 
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)

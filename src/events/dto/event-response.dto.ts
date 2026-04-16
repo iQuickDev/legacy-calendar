@@ -1,4 +1,3 @@
-
 import { ApiProperty } from '@nestjs/swagger';
 import { UserDto } from '../../users/dto/user.dto';
 import { InviteStatus } from '@prisma/client';
@@ -34,7 +33,6 @@ export class EventParticipantDto extends UserDto {
     @ApiProperty({ type: UserDto, description: 'Driver details', required: false })
     driver?: UserDto;
 }
-
 
 export class EventResponseDto {
     @ApiProperty({ example: 1, description: 'Event ID' })
@@ -97,4 +95,3 @@ export class EventResponseDto {
     @ApiProperty({ example: 15, description: 'Beer budget', required: false, nullable: true })
     beerPrice?: number | null;
 }
-

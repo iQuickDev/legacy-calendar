@@ -5,7 +5,7 @@ export const EVENT_NOTIFICATION_TITLES = {
     participationAccepted: 'Invite Accepted',
     participationUpdated: 'Participation Updated',
     participationCancelled: 'Participation Cancelled',
-    rideAssigned: 'Ride Assigned',
+    rideAssigned: 'Ride Assigned'
 } as const;
 
 export const EVENT_NOTIFICATION_MESSAGES = {
@@ -18,5 +18,5 @@ export const EVENT_NOTIFICATION_MESSAGES = {
         `${username} has updated their preferences for "${eventTitle}"`,
     participationCancelled: (username: string, eventTitle: string) =>
         `${username} has cancelled their participation in "${eventTitle}"`,
-    rideAssigned: (eventTitle: string) => `You have been assigned a ride for "${eventTitle}"`,
+    rideAssigned: (eventTitle: string) => `You have been assigned a ride for "${eventTitle}"`
 } as const;

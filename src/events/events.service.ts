@@ -14,8 +14,8 @@ import { mapEventToDto } from './event-response.mapper';
 export class EventsService {
     constructor(
         private readonly eventsRepo: EventsRepository,
-        private readonly notificationsService: NotificationsService,
-    ) { }
+        private readonly notificationsService: NotificationsService
+    ) {}
 
     async create(createEventDto: CreateEventDto, userId: number): Promise<EventResponseDto> {
         const { participants = [], ...eventData } = createEventDto;
@@ -28,14 +28,14 @@ export class EventsService {
                 host: { connect: { id: hostId } },
                 ...(participantIds.length > 0
                     ? {
-                        participants: {
-                            create: participantIds.map(userId => ({
-                                userId,
-                                status: InviteStatus.PENDING,
-                            })),
-                        },
-                    }
-                    : {}),
+                          participants: {
+                              create: participantIds.map((userId) => ({
+                                  userId,
+                                  status: InviteStatus.PENDING
+                              }))
+                          }
+                      }
+                    : {})
             });
 
             if (participantIds.length > 0) {
@@ -44,7 +44,7 @@ export class EventsService {
                     event.id,
                     NotificationCode.INVITATION_NEW,
                     EVENT_NOTIFICATION_TITLES.invitationNew,
-                    EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title),
+                    EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title)
                 );
             }
 
@@ -52,7 +52,7 @@ export class EventsService {
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
                 throw new NotFoundException(
-                    `User in host or participants not found. IDs: host=${hostId}, participants=[${participantIds.join(', ')}]`,
+                    `User in host or participants not found. IDs: host=${hostId}, participants=[${participantIds.join(', ')}]`
                 );
             }
             throw error;
@@ -61,7 +61,7 @@ export class EventsService {
 
     async findAll(userId?: number): Promise<EventResponseDto[]> {
         const events = await this.eventsRepo.findAll(userId);
-        return events.map(event => mapEventToDto(event));
+        return events.map((event) => mapEventToDto(event));
     }
 
     async findOne(id: number, userId?: number): Promise<EventResponseDto> {
@@ -84,7 +84,7 @@ export class EventsService {
             event.id,
             NotificationCode.EVENT_CANCELLED,
             EVENT_NOTIFICATION_TITLES.eventCancelled,
-            EVENT_NOTIFICATION_MESSAGES.eventCancelled(event.title),
+            EVENT_NOTIFICATION_MESSAGES.eventCancelled(event.title)
         );
 
         return this.eventsRepo.remove(id);
@@ -128,7 +128,7 @@ export class EventsService {
                     event.id,
                     NotificationCode.INVITATION_NEW,
                     EVENT_NOTIFICATION_TITLES.invitationNew,
-                    EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title),
+                    EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title)
                 );
             }
         }
@@ -138,7 +138,7 @@ export class EventsService {
             NotificationCode.EVENT_UPDATED,
             EVENT_NOTIFICATION_TITLES.eventUpdated,
             EVENT_NOTIFICATION_MESSAGES.eventUpdated(event.title),
-            InviteStatus.ACCEPTED,
+            InviteStatus.ACCEPTED
         );
 
         return mapEventToDto(updatedEvent);
@@ -159,7 +159,7 @@ export class EventsService {
                 eventId,
                 NotificationCode.INVITATION_NEW,
                 EVENT_NOTIFICATION_TITLES.invitationNew,
-                EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title),
+                EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title)
             );
         }
 
@@ -190,14 +190,14 @@ export class EventsService {
                         hostTokens,
                         EVENT_NOTIFICATION_TITLES.participationAccepted,
                         EVENT_NOTIFICATION_MESSAGES.participationAccepted(username, event.title),
-                        { type: NotificationCode.PARTICIPATION_ACCEPTED, eventId: String(eventId) },
+                        { type: NotificationCode.PARTICIPATION_ACCEPTED, eventId: String(eventId) }
                     );
                 } else {
                     await this.notificationsService.sendMulticast(
                         hostTokens,
                         EVENT_NOTIFICATION_TITLES.participationUpdated,
                         EVENT_NOTIFICATION_MESSAGES.participationUpdated(username, event.title),
-                        { type: NotificationCode.PARTICIPATION_UPDATED, eventId: String(eventId) },
+                        { type: NotificationCode.PARTICIPATION_UPDATED, eventId: String(eventId) }
                     );
                 }
             }
@@ -223,7 +223,7 @@ export class EventsService {
                         hostTokens,
                         EVENT_NOTIFICATION_TITLES.participationCancelled,
                         EVENT_NOTIFICATION_MESSAGES.participationCancelled(username, event.title),
-                        { type: NotificationCode.PARTICIPATION_CANCELLED, eventId: String(eventId) },
+                        { type: NotificationCode.PARTICIPATION_CANCELLED, eventId: String(eventId) }
                     );
                 }
             }
@@ -254,7 +254,9 @@ export class EventsService {
 
         if (!isHost && !isAssigningToSelf && !isUnassigningFromSelf) {
             if (driverId !== null) {
-                throw new ForbiddenException('Only the host or the driver of the vehicle can assign passengers to this car');
+                throw new ForbiddenException(
+                    'Only the host or the driver of the vehicle can assign passengers to this car'
+                );
             } else {
                 throw new ForbiddenException('Only the host or the current driver can remove passengers from this car');
             }
@@ -279,20 +281,22 @@ export class EventsService {
                 eventId,
                 NotificationCode.EVENT_UPDATED,
                 EVENT_NOTIFICATION_TITLES.rideAssigned,
-                EVENT_NOTIFICATION_MESSAGES.rideAssigned(event.title),
+                EVENT_NOTIFICATION_MESSAGES.rideAssigned(event.title)
             );
         }
 
         return this.findOne(eventId);
     }
 
-    private buildCreateEventInput(eventData: Omit<CreateEventDto, 'participants'>): Omit<Prisma.EventCreateInput, 'host'> {
+    private buildCreateEventInput(
+        eventData: Omit<CreateEventDto, 'participants'>
+    ): Omit<Prisma.EventCreateInput, 'host'> {
         const { startTime, endTime, ...rest } = eventData;
 
         return {
             ...rest,
             startTime: new Date(startTime),
-            endTime: endTime ? new Date(endTime) : null,
+            endTime: endTime ? new Date(endTime) : null
         };
     }
 
@@ -313,7 +317,7 @@ export class EventsService {
 
     private buildParticipantsUpdate(
         toAdd: number[],
-        toRemove: number[],
+        toRemove: number[]
     ): Prisma.EventUpdateInput['participants'] | undefined {
         const participantsUpdate: NonNullable<Prisma.EventUpdateInput['participants']> = {};
 
@@ -322,9 +326,9 @@ export class EventsService {
         }
 
         if (toAdd.length > 0) {
-            participantsUpdate.create = toAdd.map(userId => ({
+            participantsUpdate.create = toAdd.map((userId) => ({
                 userId,
-                status: InviteStatus.PENDING,
+                status: InviteStatus.PENDING
             }));
         }
 
@@ -336,25 +340,25 @@ export class EventsService {
         const nextIds = new Set(nextParticipantIds);
 
         return {
-            toAdd: nextParticipantIds.filter(userId => !existingIds.has(userId)),
-            toRemove: existingParticipantIds.filter(userId => !nextIds.has(userId)),
+            toAdd: nextParticipantIds.filter((userId) => !existingIds.has(userId)),
+            toRemove: existingParticipantIds.filter((userId) => !nextIds.has(userId))
         };
     }
 
     private getParticipantUserIds(event: EventWithRelations): number[] {
-        return event.participants.map(participant => participant.userId);
+        return event.participants.map((participant) => participant.userId);
     }
 
     private getParticipant(event: EventWithRelations, userId: number) {
-        return event.participants.find(participant => participant.userId === userId);
+        return event.participants.find((participant) => participant.userId === userId);
     }
 
     private getRideAssignment(event: EventWithRelations, passengerId: number) {
-        return event.rideAssignments.find(assignment => assignment.passengerId === passengerId);
+        return event.rideAssignments.find((assignment) => assignment.passengerId === passengerId);
     }
 
     private normalizeUserIds(userIds: number[]): number[] {
-        return [...new Set(userIds.map(userId => Number(userId)).filter(Number.isFinite))];
+        return [...new Set(userIds.map((userId) => Number(userId)).filter(Number.isFinite))];
     }
 
     private async findEventOrThrow(id: number, userId?: number): Promise<EventWithRelations> {
@@ -371,7 +375,7 @@ export class EventsService {
         type: NotificationCode,
         title: string,
         body: string,
-        status?: InviteStatus,
+        status?: InviteStatus
     ) {
         const tokens = status
             ? await this.eventsRepo.getParticipantTokensByStatus(eventId, status)
@@ -387,7 +391,7 @@ export class EventsService {
         eventId: number,
         type: NotificationCode,
         title: string,
-        body: string,
+        body: string
     ) {
         const tokens = await this.eventsRepo.getUserTokens(userIds);
 

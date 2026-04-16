@@ -7,15 +7,15 @@ export const EVENT_INCLUDE = {
     host: { select: { id: true, username: true, profilePicture: true } },
     participants: {
         include: {
-            user: { select: { id: true, username: true, profilePicture: true } },
-        },
+            user: { select: { id: true, username: true, profilePicture: true } }
+        }
     },
     rideAssignments: {
         include: {
             driver: { select: { id: true, username: true, profilePicture: true } },
-            passenger: { select: { id: true, username: true, profilePicture: true } },
-        },
-    },
+            passenger: { select: { id: true, username: true, profilePicture: true } }
+        }
+    }
 } satisfies Prisma.EventInclude;
 
 export type EventWithRelations = Prisma.EventGetPayload<{
@@ -24,12 +24,12 @@ export type EventWithRelations = Prisma.EventGetPayload<{
 
 @Injectable()
 export class EventsRepository {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) {}
 
     async create(data: Prisma.EventCreateInput): Promise<EventWithRelations> {
         return this.prisma.event.create({
             data,
-            include: EVENT_INCLUDE,
+            include: EVENT_INCLUDE
         });
     }
 
@@ -40,13 +40,9 @@ export class EventsRepository {
     async findAll(userId?: number): Promise<EventWithRelations[]> {
         return this.prisma.event.findMany({
             where: {
-                OR: [
-                    { isPrivate: false },
-                    { hostId: userId },
-                    { participants: { some: { userId } } },
-                ],
+                OR: [{ isPrivate: false }, { hostId: userId }, { participants: { some: { userId } } }]
             },
-            include: EVENT_INCLUDE,
+            include: EVENT_INCLUDE
         });
     }
 
@@ -54,13 +50,9 @@ export class EventsRepository {
         return this.prisma.event.findFirst({
             where: {
                 id,
-                OR: [
-                    { isPrivate: false },
-                    { hostId: userId },
-                    { participants: { some: { userId } } },
-                ],
+                OR: [{ isPrivate: false }, { hostId: userId }, { participants: { some: { userId } } }]
             },
-            include: EVENT_INCLUDE,
+            include: EVENT_INCLUDE
         });
     }
 
@@ -83,7 +75,7 @@ export class EventsRepository {
                 wantsAlcohol,
                 wantsBeer,
                 hasVehicle,
-                vehicleSeats,
+                vehicleSeats
             },
             create: {
                 userId,
@@ -95,8 +87,8 @@ export class EventsRepository {
                 wantsAlcohol,
                 wantsBeer,
                 hasVehicle,
-                vehicleSeats,
-            },
+                vehicleSeats
+            }
         });
     }
 
@@ -105,7 +97,7 @@ export class EventsRepository {
             return this.prisma.rideAssignment.deleteMany({
                 where: {
                     eventId,
-                    passengerId,
+                    passengerId
                 }
             });
         }
@@ -115,13 +107,13 @@ export class EventsRepository {
                 eventId_passengerId: { eventId, passengerId }
             },
             update: {
-                driverId,
+                driverId
             },
             create: {
                 eventId,
                 passengerId,
-                driverId,
-            },
+                driverId
+            }
         });
     }
 
@@ -133,10 +125,7 @@ export class EventsRepository {
         return this.prisma.rideAssignment.deleteMany({
             where: {
                 eventId,
-                OR: [
-                    { passengerId: { in: userIds } },
-                    { driverId: { in: userIds } },
-                ],
+                OR: [{ passengerId: { in: userIds } }, { driverId: { in: userIds } }]
             }
         });
     }
@@ -153,10 +142,9 @@ export class EventsRepository {
         return this.prisma.event.update({
             where: { id },
             data,
-            include: EVENT_INCLUDE,
+            include: EVENT_INCLUDE
         });
     }
-
 
     async inviteUser(eventId: number, username: string) {
         const user = await this.prisma.user.findUnique({ where: { username } });
@@ -174,8 +162,8 @@ export class EventsRepository {
             data: {
                 userId: user.id,
                 eventId,
-                status: InviteStatus.PENDING,
-            },
+                status: InviteStatus.PENDING
+            }
         });
 
         return user;
@@ -184,7 +172,7 @@ export class EventsRepository {
     async getParticipantTokens(eventId: number): Promise<string[]> {
         const attendances = await this.prisma.attendance.findMany({
             where: { eventId },
-            include: { user: { include: { fcmTokens: true } } },
+            include: { user: { include: { fcmTokens: true } } }
         });
 
         return attendances.flatMap((a) => a.user.fcmTokens.map((t) => t.token));
@@ -193,7 +181,7 @@ export class EventsRepository {
     async getParticipantTokensByStatus(eventId: number, status: InviteStatus): Promise<string[]> {
         const attendances = await this.prisma.attendance.findMany({
             where: { eventId, status },
-            include: { user: { include: { fcmTokens: true } } },
+            include: { user: { include: { fcmTokens: true } } }
         });
 
         return attendances.flatMap((a) => a.user.fcmTokens.map((t) => t.token));
@@ -202,7 +190,7 @@ export class EventsRepository {
     async getUserTokens(userIds: number[]): Promise<string[]> {
         const tokens = await this.prisma.fcmToken.findMany({
             where: { userId: { in: userIds } },
-            select: { token: true },
+            select: { token: true }
         });
 
         return tokens.map((t) => t.token);

@@ -10,7 +10,7 @@ import { EventResponseDto } from './dto/event-response.dto';
 @ApiTags('events')
 @Controller('events')
 export class EventsController {
-    constructor(private readonly eventsService: EventsService) { }
+    constructor(private readonly eventsService: EventsService) {}
 
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
@@ -118,4 +118,3 @@ export class EventsController {
         return this.eventsService.assignRide(id, passengerId, driverId, req.user.userId);
     }
 }
-

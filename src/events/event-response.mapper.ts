@@ -6,13 +6,13 @@ function mapUserDto(user: { id: number; username: string; profilePicture: string
     return {
         id: user.id,
         username: user.username,
-        profilePicture: user.profilePicture,
+        profilePicture: user.profilePicture
     };
 }
 
 export function mapEventToDto(event: EventWithRelations): EventResponseDto {
     const rideAssignmentsByPassengerId = new Map(
-        event.rideAssignments.map(assignment => [assignment.passengerId, assignment]),
+        event.rideAssignments.map((assignment) => [assignment.passengerId, assignment])
     );
 
     const participantsDto: EventParticipantDto[] = event.participants.map((attendance) => {
@@ -29,7 +29,7 @@ export function mapEventToDto(event: EventWithRelations): EventResponseDto {
             hasVehicle: attendance.hasVehicle,
             vehicleSeats: attendance.vehicleSeats,
             driverId: rideAssignment?.driverId,
-            driver: rideAssignment?.driver ? mapUserDto(rideAssignment.driver) : undefined,
+            driver: rideAssignment?.driver ? mapUserDto(rideAssignment.driver) : undefined
         };
     });
 
@@ -53,6 +53,6 @@ export function mapEventToDto(event: EventWithRelations): EventResponseDto {
         weedPrice: event.weedPrice,
         sleepPrice: event.sleepPrice,
         alcoholPrice: event.alcoholPrice,
-        beerPrice: event.beerPrice,
+        beerPrice: event.beerPrice
     };
 }

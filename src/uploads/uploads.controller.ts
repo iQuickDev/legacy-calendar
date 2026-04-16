@@ -6,14 +6,10 @@ import { existsSync, createReadStream } from 'fs';
 
 @Controller('uploads')
 export class UploadsController {
-    constructor(private configService: ConfigService) { }
+    constructor(private configService: ConfigService) {}
 
     @Get(':category/:filename')
-    async getUpload(
-        @Param('category') category: string,
-        @Param('filename') filename: string,
-        @Res() res: Response,
-    ) {
+    async getUpload(@Param('category') category: string, @Param('filename') filename: string, @Res() res: Response) {
         const filePath = join(process.cwd(), 'uploads', category, filename);
 
         if (existsSync(filePath)) {
