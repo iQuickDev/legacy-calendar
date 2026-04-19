@@ -16,6 +16,7 @@ model User {
   fcmTokens                  FcmToken[]
   rideAssignmentsAsDriver    RideAssignment[] @relation("RideAssignmentDriver")
   rideAssignmentsAsPassenger RideAssignment[] @relation("RideAssignmentPassenger")
+  isAdmin                    Boolean          @default(false)
 }
 
 model FcmToken {

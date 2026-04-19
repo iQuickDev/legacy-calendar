@@ -5,5 +5,6 @@ export interface RequestWithUser extends Request {
         userId?: number;
         id?: number;
         username: string;
+        isAdmin: boolean;
     };
 }
