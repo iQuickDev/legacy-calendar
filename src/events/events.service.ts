@@ -180,6 +180,10 @@ export class EventsService {
             throw new ForbiddenException('This event is closed and cannot be joined spontaneously');
         }
 
+        if (event.participationDeadline && new Date() > event.participationDeadline && event.hostId !== userId) {
+            throw new ForbiddenException('The participation deadline for this event has passed');
+        }
+
         const result = await this.eventsRepo.join(userId, eventId, participateDto);
 
         if (event.hostId !== userId) {
@@ -296,17 +300,18 @@ export class EventsService {
     private buildCreateEventInput(
         eventData: Omit<CreateEventDto, 'participants'>
     ): Omit<Prisma.EventCreateInput, 'host'> {
-        const { startTime, endTime, ...rest } = eventData;
+        const { startTime, endTime, participationDeadline, ...rest } = eventData;
 
         return {
             ...rest,
             startTime: new Date(startTime),
-            endTime: endTime ? new Date(endTime) : null
+            endTime: endTime ? new Date(endTime) : null,
+            participationDeadline: participationDeadline ? new Date(participationDeadline) : null
         };
     }
 
     private buildUpdateEventInput(eventData: Omit<UpdateEventDto, 'participants'>): Prisma.EventUpdateInput {
-        const { startTime, endTime, ...rest } = eventData;
+        const { startTime, endTime, participationDeadline, ...rest } = eventData;
         const updateData: Prisma.EventUpdateInput = { ...rest };
 
         if (startTime !== undefined) {
@@ -315,6 +320,10 @@ export class EventsService {
 
         if (endTime !== undefined) {
             updateData.endTime = endTime ? new Date(endTime) : null;
+        }
+
+        if (participationDeadline !== undefined) {
+            updateData.participationDeadline = participationDeadline ? new Date(participationDeadline) : null;
         }
 
         return updateData;

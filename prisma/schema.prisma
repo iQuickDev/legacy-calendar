@@ -7,15 +7,15 @@ datasource db {
 }
 
 model User {
-  id                                   Int          @id @default(autoincrement())
-  username                             String       @unique
-  password                             String
-  profilePicture                       String?
-  rideAssignmentsAsDriver              RideAssignment[] @relation("RideAssignmentDriver")
-  rideAssignmentsAsPassenger           RideAssignment[] @relation("RideAssignmentPassenger")
-  invitations                          Attendance[]
-  hostedEvents                         Event[]      @relation("EventHost")
-  fcmTokens                            FcmToken[]
+  id                         Int              @id @default(autoincrement())
+  username                   String           @unique
+  password                   String
+  profilePicture             String?
+  invitations                Attendance[]
+  hostedEvents               Event[]          @relation("EventHost")
+  fcmTokens                  FcmToken[]
+  rideAssignmentsAsDriver    RideAssignment[] @relation("RideAssignmentDriver")
+  rideAssignmentsAsPassenger RideAssignment[] @relation("RideAssignmentPassenger")
 }
 
 model FcmToken {
@@ -27,57 +27,57 @@ model FcmToken {
 }
 
 model Event {
-  id           Int          @id @default(autoincrement())
-  title        String
-  description  String?
-  location     String?
-  startTime    DateTime
-  endTime      DateTime?
-  hostId       Int
-  isOpen       Boolean      @default(true)
-  hasAlcohol   Boolean      @default(false)
-  hasFood      Boolean      @default(false)
-  hasSleep     Boolean      @default(false)
-  hasWeed      Boolean      @default(false)
-  alcoholPrice Float?
-  beerPrice    Float?
-  foodPrice    Float?
-  hasBeer      Boolean      @default(false)
-  sleepPrice   Float?
-  weedPrice    Float?
-  isPrivate    Boolean      @default(false)
-  participants Attendance[]
-  rideAssignments RideAssignment[]
-  host         User         @relation("EventHost", fields: [hostId], references: [id])
+  id                    Int              @id @default(autoincrement())
+  title                 String
+  description           String?
+  location              String?
+  startTime             DateTime
+  endTime               DateTime?
+  hostId                Int
+  isOpen                Boolean          @default(true)
+  hasAlcohol            Boolean          @default(false)
+  hasFood               Boolean          @default(false)
+  hasSleep              Boolean          @default(false)
+  hasWeed               Boolean          @default(false)
+  alcoholPrice          Float?
+  beerPrice             Float?
+  foodPrice             Float?
+  hasBeer               Boolean          @default(false)
+  sleepPrice            Float?
+  weedPrice             Float?
+  isPrivate             Boolean          @default(false)
+  participationDeadline DateTime?
+  participants          Attendance[]
+  host                  User             @relation("EventHost", fields: [hostId], references: [id])
+  rideAssignments       RideAssignment[]
 }
 
 model Attendance {
-  id                             Int          @id @default(autoincrement())
-  userId                         Int
-  eventId                        Int
-  status                         InviteStatus @default(PENDING)
-  wantsAlcohol                   Boolean      @default(false)
-  wantsFood                      Boolean      @default(false)
-  wantsSleep                     Boolean      @default(false)
-  wantsWeed                      Boolean      @default(false)
-  wantsBeer                      Boolean      @default(false)
-  hasVehicle                     Boolean      @default(false)
-  vehicleSeats                   Int          @default(0)
-  event                          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  user                           User         @relation(fields: [userId], references: [id])
+  id           Int          @id @default(autoincrement())
+  userId       Int
+  eventId      Int
+  status       InviteStatus @default(PENDING)
+  wantsAlcohol Boolean      @default(false)
+  wantsFood    Boolean      @default(false)
+  wantsSleep   Boolean      @default(false)
+  wantsWeed    Boolean      @default(false)
+  wantsBeer    Boolean      @default(false)
+  hasVehicle   Boolean      @default(false)
+  vehicleSeats Int          @default(0)
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id])
 
   @@unique([userId, eventId])
 }
 
 model RideAssignment {
-  id          Int  @id @default(autoincrement())
+  id          Int   @id @default(autoincrement())
   eventId     Int
   driverId    Int
   passengerId Int
-
-  event     Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  driver    User  @relation("RideAssignmentDriver", fields: [driverId], references: [id], onDelete: Cascade)
-  passenger User  @relation("RideAssignmentPassenger", fields: [passengerId], references: [id], onDelete: Cascade)
+  driver      User  @relation("RideAssignmentDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  event       Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  passenger   User  @relation("RideAssignmentPassenger", fields: [passengerId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, passengerId])
   @@index([eventId, driverId])
@@ -87,5 +87,4 @@ enum InviteStatus {
   PENDING
   ACCEPTED
   DECLINED
-  REJECTED
 }

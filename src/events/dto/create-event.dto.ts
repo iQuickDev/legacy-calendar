@@ -42,6 +42,16 @@ export class CreateEventDto {
     @IsInt({ each: true })
     participants?: number[];
 
+    @ApiProperty({
+        example: '2026-02-04T09:00:00Z',
+        description: 'Deadline for participation (ISO 8601).',
+        required: false
+    })
+    @IsDateString()
+    @IsOptional()
+    participationDeadline?: string;
+
+
     @ApiProperty({ example: true, description: 'Whether the event can be joined spontaneously', required: false })
     @IsOptional()
     @IsBoolean()

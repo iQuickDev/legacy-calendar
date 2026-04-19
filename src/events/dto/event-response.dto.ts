@@ -53,6 +53,14 @@ export class EventResponseDto {
     @ApiProperty({ example: '2026-02-04T11:00:00Z', description: 'End time', required: false })
     endTime: Date | null;
 
+    @ApiProperty({
+        example: '2026-02-04T09:00:00Z',
+        description: 'Deadline for participation',
+        required: false,
+        nullable: true
+    })
+    participationDeadline: Date | null;
+
     @ApiProperty({ type: UserDto, description: 'Host of the event' })
     host: UserDto;
 

@@ -40,6 +40,7 @@ export function mapEventToDto(event: EventWithRelations): EventResponseDto {
         location: event.location,
         startTime: event.startTime,
         endTime: event.endTime ?? null,
+        participationDeadline: event.participationDeadline ?? null,
         host: mapUserDto(event.host),
         participants: participantsDto,
         isOpen: event.isOpen,
