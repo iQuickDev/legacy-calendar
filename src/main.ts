@@ -4,6 +4,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as fs from 'fs';
 import * as path from 'path';
+import compression from 'compression';
 
 async function bootstrap() {
     const logger = new Logger('Bootstrap');
@@ -14,6 +15,10 @@ async function bootstrap() {
     });
 
     app.enableCors();
+
+    // Response Compression with Gzip, Deflate and Brotli support
+    app.use(compression());
+
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
     const config = new DocumentBuilder()
