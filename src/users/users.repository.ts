@@ -6,7 +6,9 @@ import { Prisma, User as UserModel } from '@prisma/client';
 export class UsersRepository {
     constructor(private readonly prisma: PrismaService) {}
 
-    async create(data: Prisma.UserCreateInput): Promise<Pick<UserModel, 'id' | 'username' | 'profilePicture' | 'isAdmin'>> {
+    async create(
+        data: Prisma.UserCreateInput
+    ): Promise<Pick<UserModel, 'id' | 'username' | 'profilePicture' | 'isAdmin'>> {
         return this.prisma.user.create({
             data,
             select: { id: true, username: true, profilePicture: true, isAdmin: true }
@@ -36,7 +38,10 @@ export class UsersRepository {
         return this.prisma.user.findUnique({ where: { username } });
     }
 
-    update(id: number, data: Prisma.UserUpdateInput): Promise<Pick<UserModel, 'id' | 'username' | 'profilePicture' | 'isAdmin'>> {
+    update(
+        id: number,
+        data: Prisma.UserUpdateInput
+    ): Promise<Pick<UserModel, 'id' | 'username' | 'profilePicture' | 'isAdmin'>> {
         return this.prisma.user.update({
             where: { id },
             data,

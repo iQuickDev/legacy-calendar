@@ -51,7 +51,6 @@ export class CreateEventDto {
     @IsOptional()
     participationDeadline?: string;
 
-
     @ApiProperty({ example: true, description: 'Whether the event can be joined spontaneously', required: false })
     @IsOptional()
     @IsBoolean()
