@@ -43,11 +43,10 @@ export class UsersController {
     }
 
     @Get()
-    @UseGuards(UserAuthGuard, AdminGuard)
+    @UseGuards(UserAuthGuard)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get all users (Admin only)' })
+    @ApiOperation({ summary: 'Get all users' })
     @ApiResponse({ status: 200, description: 'Return all users' })
-    @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
     findAll() {
         return this.usersService.findAll();
     }
