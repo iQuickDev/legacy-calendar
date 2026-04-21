@@ -18,6 +18,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import 'multer';
 import type { Express } from 'express';
 import { AdminGuard } from '../auth/guards/admin.guard';
 import { UserAuthGuard } from '../auth/guards/user-auth.guard';

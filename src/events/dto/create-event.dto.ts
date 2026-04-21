@@ -6,7 +6,7 @@ export class CreateEventDto {
     @ApiProperty({ example: 'Team Standup', description: 'Title of the event' })
     @IsString()
     @IsNotEmpty()
-    title: string;
+    title!: string;
 
     @ApiProperty({ example: 'Weekly sync with the team', description: 'Description', required: false })
     @IsString()
@@ -25,7 +25,7 @@ export class CreateEventDto {
     @IsDateString()
     @IsEventStartTimeWithinAllowedRange()
     @IsNotEmpty()
-    startTime: string;
+    startTime!: string;
 
     @ApiProperty({
         example: '2026-02-04T11:00:00Z',

@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class UserDto {
     @ApiProperty({ example: 1, description: 'The user ID' })
-    id: number;
+    id!: number;
 
     @ApiProperty({ example: 'user123', description: 'The username' })
-    username: string;
+    username!: string;
 
     @ApiProperty({
         example: '/uploads/profile-pictures/1.webp',

@@ -1,3 +1,4 @@
+import 'multer';
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Prisma, User as UserModel } from '@prisma/client';

@@ -5,5 +5,5 @@ export class SubscribeNotificationDto {
     @ApiProperty({ example: 'fcm_token_here', description: 'Firebase FCM Token' })
     @IsString()
     @IsNotEmpty()
-    token: string;
+    token!: string;
 }

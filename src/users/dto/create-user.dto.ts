@@ -7,13 +7,13 @@ export class CreateUserDto {
     @IsNotEmpty()
     @Length(3, 30)
     @Matches(/^[a-zA-Z0-9._-]+$/)
-    username: string;
+    username!: string;
 
     @ApiProperty({ example: 'password123', description: 'The password of the user (min 2 chars)', minLength: 2 })
     @IsString()
     @IsNotEmpty()
     @Length(2, 30)
-    password: string;
+    password!: string;
 
     @ApiProperty({ example: false, description: 'Whether the user is an admin', default: false, required: false })
     isAdmin?: boolean;

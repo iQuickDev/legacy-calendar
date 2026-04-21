@@ -10,7 +10,7 @@ export class FindEventsQueryDto {
     @IsNotEmpty()
     @Type(() => Date)
     @IsDate()
-    start: Date;
+    start!: Date;
 
     @ApiProperty({
         example: '2026-05-03T23:59:59.999Z',
@@ -19,5 +19,5 @@ export class FindEventsQueryDto {
     @IsNotEmpty()
     @Type(() => Date)
     @IsDate()
-    end: Date;
+    end!: Date;
 }

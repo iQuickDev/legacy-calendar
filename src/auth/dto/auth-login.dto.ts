@@ -5,10 +5,10 @@ export class AuthLoginDto {
     @ApiProperty({ example: 'user123', description: 'The username of the user' })
     @IsString()
     @IsNotEmpty()
-    username: string;
+    username!: string;
 
     @ApiProperty({ example: 'password123', description: 'The password of the user', minLength: 8 })
     @IsString()
     @IsNotEmpty()
-    password: string;
+    password!: string;
 }

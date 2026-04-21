@@ -4,7 +4,7 @@ import { InviteStatus } from '@prisma/client';
 
 export class EventParticipantDto extends UserDto {
     @ApiProperty({ enum: InviteStatus, example: 'PENDING', description: 'Status of the invitation' })
-    status: InviteStatus;
+    status!: InviteStatus;
 
     @ApiProperty({ example: true, description: 'User wants food' })
     wantsFood?: boolean;
@@ -36,10 +36,10 @@ export class EventParticipantDto extends UserDto {
 
 export class EventResponseDto {
     @ApiProperty({ example: 1, description: 'Event ID' })
-    id: number;
+    id!: number;
 
     @ApiProperty({ example: 'Team Standup', description: 'Title of the event' })
-    title: string;
+    title!: string;
 
     @ApiProperty({ example: 'Weekly sync with the team', description: 'Description', required: false, nullable: true })
     description?: string | null;
@@ -48,10 +48,10 @@ export class EventResponseDto {
     location?: string | null;
 
     @ApiProperty({ example: '2026-02-04T10:00:00Z', description: 'Start time' })
-    startTime: Date;
+    startTime!: Date;
 
     @ApiProperty({ example: '2026-02-04T11:00:00Z', description: 'End time', required: false })
-    endTime: Date | null;
+    endTime!: Date | null;
 
     @ApiProperty({
         example: '2026-02-04T09:00:00Z',
@@ -59,19 +59,19 @@ export class EventResponseDto {
         required: false,
         nullable: true
     })
-    participationDeadline: Date | null;
+    participationDeadline!: Date | null;
 
     @ApiProperty({ type: UserDto, description: 'Host of the event' })
-    host: UserDto;
+    host!: UserDto;
 
     @ApiProperty({ type: [EventParticipantDto], description: 'List of participants' })
-    participants: EventParticipantDto[];
+    participants!: EventParticipantDto[];
 
     @ApiProperty({ example: true, description: 'Whether the event is open for spontaneous joining' })
-    isOpen: boolean;
+    isOpen!: boolean;
 
     @ApiProperty({ example: false, description: 'Whether the event is private' })
-    isPrivate: boolean;
+    isPrivate!: boolean;
 
     @ApiProperty({ example: true, description: 'Event has food' })
     hasFood?: boolean;
