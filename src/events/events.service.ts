@@ -85,6 +85,8 @@ export class EventsService {
             throw new ForbiddenException('Only the host can delete this event');
         }
 
+        this.validateEventNotEnded(event);
+
         await this.notifyParticipants(
             event.id,
             NotificationCode.EVENT_CANCELLED,
@@ -101,6 +103,8 @@ export class EventsService {
         if (event.hostId !== userId) {
             throw new ForbiddenException('Only the host can update this event');
         }
+
+        this.validateEventNotEnded(event);
 
         const { participants, ...eventData } = updateEventDto;
         const updateData: Prisma.EventUpdateInput = this.buildUpdateEventInput(eventData);
@@ -156,6 +160,8 @@ export class EventsService {
             throw new ForbiddenException('Only the host can invite users');
         }
 
+        this.validateEventNotEnded(event);
+
         const invitedUser = await this.eventsRepo.inviteUser(eventId, username);
 
         if (invitedUser) {
@@ -175,6 +181,8 @@ export class EventsService {
         const event = await this.findEventOrThrow(eventId, userId);
         const participant = this.getParticipant(event, userId);
         const isParticipant = !!participant;
+
+        this.validateEventNotEnded(event);
 
         if (!event.isOpen && !isParticipant && event.hostId !== userId) {
             throw new ForbiddenException('This event is closed and cannot be joined spontaneously');
@@ -218,6 +226,8 @@ export class EventsService {
     async leave(eventId: number, userId: number) {
         const event = await this.findEventOrThrow(eventId, userId);
 
+        this.validateEventNotEnded(event);
+
         try {
             const result = await this.eventsRepo.leave(userId, eventId);
             await this.eventsRepo.deleteRideAssignmentsForUsers(eventId, [userId]);
@@ -248,6 +258,8 @@ export class EventsService {
 
     async assignRide(eventId: number, passengerId: number, driverId: number | null, requestingUserId: number) {
         const event = await this.findEventOrThrow(eventId, requestingUserId);
+
+        this.validateEventNotEnded(event);
 
         const isHost = event.hostId === requestingUserId;
         const passenger = this.getParticipant(event, passengerId);
@@ -382,6 +394,12 @@ export class EventsService {
         }
 
         return event;
+    }
+
+    private validateEventNotEnded(event: EventWithRelations) {
+        if (event.endTime && new Date() > event.endTime) {
+            throw new ForbiddenException('This event has already ended and cannot be modified');
+        }
     }
 
     private async notifyParticipants(
