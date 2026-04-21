@@ -1,5 +1,5 @@
 # --- STAGE 1: Build the application ---
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # --- STAGE 2: Install production dependencies ---
-FROM node:20-alpine AS prod-deps
+FROM node:22-alpine AS prod-deps
 
 WORKDIR /app
 
@@ -34,7 +34,7 @@ RUN apk add --no-cache python3 make g++ && \
     apk del python3 make g++
 
 # --- STAGE 3: Final Runner Image ---
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
