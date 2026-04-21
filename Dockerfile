@@ -30,7 +30,6 @@ COPY prisma ./prisma/
 # Need build-base tools for native modules like bcrypt
 RUN apk add --no-cache python3 make g++ && \
     npm ci --omit=dev && \
-    npx prisma generate && \
     apk del python3 make g++
 
 # --- STAGE 3: Final Runner Image ---
@@ -46,6 +45,7 @@ ENV NODE_OPTIONS=--openssl-legacy-provider
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma ./prisma
 
 # Create uploads directory and set permissions for the node user
 RUN mkdir -p /app/uploads/profile-pictures && chown -R node:node /app/uploads
