@@ -1,15 +1,15 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { Prisma, InviteStatus } from '../../prisma/generated/client.js';
-import { CreateEventDto } from './dto/create-event.dto';
-import { UpdateEventDto } from './dto/update-event.dto';
-import { ParticipateDto } from './dto/participate.dto';
-import { EventResponseDto } from './dto/event-response.dto';
-import { FindEventsQueryDto } from './dto/find-events-query.dto';
-import { EventsRepository, EventWithRelations } from './events.repository';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationCode } from '../notifications/notification-codes';
-import { EVENT_NOTIFICATION_MESSAGES, EVENT_NOTIFICATION_TITLES } from './event-notification.constants';
-import { mapEventToDto } from './event-response.mapper';
+import { CreateEventDto } from './dto/create-event.dto.js';
+import { UpdateEventDto } from './dto/update-event.dto.js';
+import { ParticipateDto } from './dto/participate.dto.js';
+import { EventResponseDto } from './dto/event-response.dto.js';
+import { FindEventsQueryDto } from './dto/find-events-query.dto.js';
+import { EventsRepository, EventWithRelations } from './events.repository.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { NotificationCode } from '../notifications/notification-codes.js';
+import { EVENT_NOTIFICATION_MESSAGES, EVENT_NOTIFICATION_TITLES } from './event-notification.constants.js';
+import { mapEventToDto } from './event-response.mapper.js';
 
 @Injectable()
 export class EventsService {

@@ -1,6 +1,6 @@
-import { EventParticipantDto, EventResponseDto } from './dto/event-response.dto';
-import { UserDto } from '../users/dto/user.dto';
-import { EventWithRelations } from './events.repository';
+import { EventParticipantDto, EventResponseDto } from './dto/event-response.dto.js';
+import { UserDto } from '../users/dto/user.dto.js';
+import { EventWithRelations } from './events.repository.js';
 
 function mapUserDto(user: { id: number; username: string; profilePicture: string | null }): UserDto {
     return {

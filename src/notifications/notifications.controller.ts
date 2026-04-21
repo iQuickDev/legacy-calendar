@@ -1,9 +1,9 @@
 import { Body, Controller, Post, Request, UseGuards, Inject } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { NotificationsService } from './notifications.service';
-import { SubscribeNotificationDto } from './dto/subscribe-notification.dto';
-import { type RequestWithUser } from '../auth/interfaces/request-with-user.interface';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { NotificationsService } from './notifications.service.js';
+import { SubscribeNotificationDto } from './dto/subscribe-notification.dto.js';
+import { type RequestWithUser } from '../auth/interfaces/request-with-user.interface.js';
 
 @ApiTags('notifications')
 @Controller('notifications')

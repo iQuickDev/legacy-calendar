@@ -1,5 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
-import { RequestWithUser } from '../interfaces/request-with-user.interface';
+import { RequestWithUser } from '../interfaces/request-with-user.interface.js';
 
 @Injectable()
 export class AdminGuard implements CanActivate {

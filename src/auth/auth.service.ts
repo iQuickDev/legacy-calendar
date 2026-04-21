@@ -2,9 +2,9 @@ import { BadRequestException, Injectable, NotFoundException, Inject } from '@nes
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User as UserModel } from '../../prisma/generated/client.js';
-import { ChangePasswordDto } from './dto/change-password.dto';
-import { UserDto } from '../users/dto/user.dto';
-import { UsersService } from '../users/users.service';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { UserDto } from '../users/dto/user.dto.js';
+import { UsersService } from '../users/users.service.js';
 
 export type AuthenticatedUser = Omit<UserModel, 'password'>;
 

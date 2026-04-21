@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "target": "ES2023",
     "strict": true,
     "esModuleInterop": true,
@@ -20,7 +20,8 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "types": ["multer"]
+    "types": ["multer"],
+    "ignoreDeprecations": "6.0"
   },
   "exclude": ["node_modules", "dist", "scratch"]
 }

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserDto } from '../../users/dto/user.dto';
+import { UserDto } from '../../users/dto/user.dto.js';
 import { InviteStatus } from '../../../prisma/generated/client.js';
 
 export class EventParticipantDto extends UserDto {
