@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards, Inject } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService, AuthenticatedUser } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -12,8 +12,8 @@ import { type RequestWithUser } from './interfaces/request-with-user.interface';
 @Controller('auth')
 export class AuthController {
     constructor(
-        private authService: AuthService,
-        private usersService: UsersService
+        @Inject(AuthService) private authService: AuthService,
+        @Inject(UsersService) private usersService: UsersService
     ) {}
 
     @UseGuards(AuthGuard('local'))

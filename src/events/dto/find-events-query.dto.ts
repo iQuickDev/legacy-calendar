@@ -4,6 +4,7 @@ import { IsDate, IsNotEmpty } from 'class-validator';
 
 export class FindEventsQueryDto {
     @ApiProperty({
+        type: Date,
         example: '2026-04-01T00:00:00.000Z',
         description: 'Start of the visible calendar range, inclusive'
     })
@@ -13,6 +14,7 @@ export class FindEventsQueryDto {
     start!: Date;
 
     @ApiProperty({
+        type: Date,
         example: '2026-05-03T23:59:59.999Z',
         description: 'End of the visible calendar range, inclusive'
     })

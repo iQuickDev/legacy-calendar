@@ -1,5 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, InviteStatus } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Prisma, InviteStatus } from '../../prisma/generated/client.js';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { ParticipateDto } from './dto/participate.dto';
@@ -14,8 +14,8 @@ import { mapEventToDto } from './event-response.mapper';
 @Injectable()
 export class EventsService {
     constructor(
-        private readonly eventsRepo: EventsRepository,
-        private readonly notificationsService: NotificationsService
+        @Inject(EventsRepository) private readonly eventsRepo: EventsRepository,
+        @Inject(NotificationsService) private readonly notificationsService: NotificationsService
     ) {}
 
     async create(createEventDto: CreateEventDto, userId: number): Promise<EventResponseDto> {

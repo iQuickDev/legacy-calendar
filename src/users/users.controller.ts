@@ -14,7 +14,8 @@ import {
     Request,
     UseGuards,
     UseInterceptors,
-    UploadedFile
+    UploadedFile,
+    Inject
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -30,7 +31,7 @@ import { type RequestWithUser } from '../auth/interfaces/request-with-user.inter
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
-    constructor(private readonly usersService: UsersService) {}
+    constructor(@Inject(UsersService) private readonly usersService: UsersService) {}
 
     @Post()
     @UseGuards(UserAuthGuard, AdminGuard)

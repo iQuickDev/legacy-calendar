@@ -9,7 +9,8 @@ import {
     Request,
     ParseIntPipe,
     Patch,
-    Query
+    Query,
+    Inject
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -24,7 +25,7 @@ import { FindEventsQueryDto } from './dto/find-events-query.dto';
 @ApiTags('events')
 @Controller('events')
 export class EventsController {
-    constructor(private readonly eventsService: EventsService) {}
+    constructor(@Inject(EventsService) private readonly eventsService: EventsService) {}
 
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)

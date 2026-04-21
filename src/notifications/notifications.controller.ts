@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards, Inject } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NotificationsService } from './notifications.service';
@@ -8,7 +8,7 @@ import { type RequestWithUser } from '../auth/interfaces/request-with-user.inter
 @ApiTags('notifications')
 @Controller('notifications')
 export class NotificationsController {
-    constructor(private readonly notificationsService: NotificationsService) {}
+    constructor(@Inject(NotificationsService) private readonly notificationsService: NotificationsService) {}
 
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)

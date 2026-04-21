@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Req, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Req, Res, NotFoundException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { join } from 'path';
@@ -7,7 +7,7 @@ import { lookup } from 'mime-types';
 
 @Controller('uploads')
 export class UploadsController {
-    constructor(private configService: ConfigService) {}
+    constructor(@Inject(ConfigService) private configService: ConfigService) {}
 
     @Get(':category/:filename')
     getUpload(
