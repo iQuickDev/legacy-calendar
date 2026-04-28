@@ -132,9 +132,19 @@ export class EventsRepository {
     }
 
     async leave(userId: number, eventId: number) {
-        return this.prisma.attendance.delete({
+        return this.prisma.attendance.update({
             where: {
                 userId_eventId: { userId, eventId }
+            },
+            data: {
+                status: InviteStatus.DECLINED,
+                hasVehicle: false,
+                vehicleSeats: 0,
+                wantsFood: false,
+                wantsWeed: false,
+                wantsSleep: false,
+                wantsAlcohol: false,
+                wantsBeer: false
             }
         });
     }
