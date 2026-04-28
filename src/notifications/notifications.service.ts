@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import * as admin from 'firebase-admin';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
+import admin from 'firebase-admin';
+import { PrismaService } from '../prisma/prisma.service.js';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -9,7 +9,7 @@ export class NotificationsService implements OnModuleInit {
     private readonly logger = new Logger(NotificationsService.name);
     private initialized = false;
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
     onModuleInit() {
         this.initializeFirebase();

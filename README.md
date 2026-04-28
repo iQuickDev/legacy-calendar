@@ -1,4 +1,8 @@
 <p align="center">
+  <i>Client source code at https://github.com/iQuickDev/legacy-calendar-client</i>
+</p>
+
+<p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 

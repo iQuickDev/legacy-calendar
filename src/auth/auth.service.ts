@@ -1,18 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { User as UserModel } from '@prisma/client';
-import { ChangePasswordDto } from './dto/change-password.dto';
-import { UserDto } from '../users/dto/user.dto';
-import { UsersService } from '../users/users.service';
+import { User as UserModel } from '../../prisma/generated/client.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { UserDto } from '../users/dto/user.dto.js';
+import { UsersService } from '../users/users.service.js';
 
 export type AuthenticatedUser = Omit<UserModel, 'password'>;
 
 @Injectable()
 export class AuthService {
     constructor(
-        private readonly usersService: UsersService,
-        private readonly jwtService: JwtService
+        @Inject(UsersService) private readonly usersService: UsersService,
+        @Inject(JwtService) private readonly jwtService: JwtService
     ) {}
 
     async validateUser(username: string, pass: string): Promise<AuthenticatedUser | null> {

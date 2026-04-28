@@ -1,21 +1,21 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, InviteStatus } from '@prisma/client';
-import { CreateEventDto } from './dto/create-event.dto';
-import { UpdateEventDto } from './dto/update-event.dto';
-import { ParticipateDto } from './dto/participate.dto';
-import { EventResponseDto } from './dto/event-response.dto';
-import { FindEventsQueryDto } from './dto/find-events-query.dto';
-import { EventsRepository, EventWithRelations } from './events.repository';
-import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationCode } from '../notifications/notification-codes';
-import { EVENT_NOTIFICATION_MESSAGES, EVENT_NOTIFICATION_TITLES } from './event-notification.constants';
-import { mapEventToDto } from './event-response.mapper';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Prisma, InviteStatus } from '../../prisma/generated/client.js';
+import { CreateEventDto } from './dto/create-event.dto.js';
+import { UpdateEventDto } from './dto/update-event.dto.js';
+import { ParticipateDto } from './dto/participate.dto.js';
+import { EventResponseDto } from './dto/event-response.dto.js';
+import { FindEventsQueryDto } from './dto/find-events-query.dto.js';
+import { EventsRepository, EventWithRelations } from './events.repository.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { NotificationCode } from '../notifications/notification-codes.js';
+import { EVENT_NOTIFICATION_MESSAGES, EVENT_NOTIFICATION_TITLES } from './event-notification.constants.js';
+import { mapEventToDto } from './event-response.mapper.js';
 
 @Injectable()
 export class EventsService {
     constructor(
-        private readonly eventsRepo: EventsRepository,
-        private readonly notificationsService: NotificationsService
+        @Inject(EventsRepository) private readonly eventsRepo: EventsRepository,
+        @Inject(NotificationsService) private readonly notificationsService: NotificationsService
     ) {}
 
     async create(createEventDto: CreateEventDto, userId: number): Promise<EventResponseDto> {
@@ -85,6 +85,8 @@ export class EventsService {
             throw new ForbiddenException('Only the host can delete this event');
         }
 
+        this.validateEventNotEnded(event);
+
         await this.notifyParticipants(
             event.id,
             NotificationCode.EVENT_CANCELLED,
@@ -101,6 +103,8 @@ export class EventsService {
         if (event.hostId !== userId) {
             throw new ForbiddenException('Only the host can update this event');
         }
+
+        this.validateEventNotEnded(event);
 
         const { participants, ...eventData } = updateEventDto;
         const updateData: Prisma.EventUpdateInput = this.buildUpdateEventInput(eventData);
@@ -156,6 +160,8 @@ export class EventsService {
             throw new ForbiddenException('Only the host can invite users');
         }
 
+        this.validateEventNotEnded(event);
+
         const invitedUser = await this.eventsRepo.inviteUser(eventId, username);
 
         if (invitedUser) {
@@ -175,6 +181,8 @@ export class EventsService {
         const event = await this.findEventOrThrow(eventId, userId);
         const participant = this.getParticipant(event, userId);
         const isParticipant = !!participant;
+
+        this.validateEventNotEnded(event);
 
         if (!event.isOpen && !isParticipant && event.hostId !== userId) {
             throw new ForbiddenException('This event is closed and cannot be joined spontaneously');
@@ -218,6 +226,8 @@ export class EventsService {
     async leave(eventId: number, userId: number) {
         const event = await this.findEventOrThrow(eventId, userId);
 
+        this.validateEventNotEnded(event);
+
         try {
             const result = await this.eventsRepo.leave(userId, eventId);
             await this.eventsRepo.deleteRideAssignmentsForUsers(eventId, [userId]);
@@ -248,6 +258,8 @@ export class EventsService {
 
     async assignRide(eventId: number, passengerId: number, driverId: number | null, requestingUserId: number) {
         const event = await this.findEventOrThrow(eventId, requestingUserId);
+
+        this.validateEventNotEnded(event);
 
         const isHost = event.hostId === requestingUserId;
         const passenger = this.getParticipant(event, passengerId);
@@ -382,6 +394,12 @@ export class EventsService {
         }
 
         return event;
+    }
+
+    private validateEventNotEnded(event: EventWithRelations) {
+        if (event.endTime && new Date() > event.endTime) {
+            throw new ForbiddenException('This event has already ended and cannot be modified');
+        }
     }
 
     private async notifyParticipants(

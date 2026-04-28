@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, Event, InviteStatus } from '@prisma/client';
-import { ParticipateDto } from './dto/participate.dto';
+import { Injectable, Inject } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { Prisma, Event, InviteStatus } from '../../prisma/generated/client.js';
+import { ParticipateDto } from './dto/participate.dto.js';
 
 export const EVENT_INCLUDE = {
     host: { select: { id: true, username: true, profilePicture: true } },
@@ -24,7 +24,7 @@ export type EventWithRelations = Prisma.EventGetPayload<{
 
 @Injectable()
 export class EventsRepository {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
     async create(data: Prisma.EventCreateInput): Promise<EventWithRelations> {
         return this.prisma.event.create({

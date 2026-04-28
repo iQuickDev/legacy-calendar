@@ -1,19 +1,19 @@
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards, Inject } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { AuthService, AuthenticatedUser } from './auth.service';
-import { UsersService } from '../users/users.service';
+import { AuthService, AuthenticatedUser } from './auth.service.js';
+import { UsersService } from '../users/users.service.js';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { AuthLoginDto } from './dto/auth-login.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { type RequestWithUser } from './interfaces/request-with-user.interface';
+import { AuthLoginDto } from './dto/auth-login.dto.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+import { type RequestWithUser } from './interfaces/request-with-user.interface.js';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
     constructor(
-        private authService: AuthService,
-        private usersService: UsersService
+        @Inject(AuthService) private authService: AuthService,
+        @Inject(UsersService) private usersService: UsersService
     ) {}
 
     @UseGuards(AuthGuard('local'))

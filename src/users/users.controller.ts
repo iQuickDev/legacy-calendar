@@ -14,22 +14,24 @@ import {
     Request,
     UseGuards,
     UseInterceptors,
-    UploadedFile
+    UploadedFile,
+    Inject
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import 'multer';
 import type { Express } from 'express';
-import { AdminGuard } from '../auth/guards/admin.guard';
-import { UserAuthGuard } from '../auth/guards/user-auth.guard';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UsersService } from './users.service';
-import { type RequestWithUser } from '../auth/interfaces/request-with-user.interface';
+import { AdminGuard } from '../auth/guards/admin.guard.js';
+import { UserAuthGuard } from '../auth/guards/user-auth.guard.js';
+import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateUserDto } from './dto/update-user.dto.js';
+import { UsersService } from './users.service.js';
+import { type RequestWithUser } from '../auth/interfaces/request-with-user.interface.js';
 
 @ApiTags('users')
 @Controller('users')
 export class UsersController {
-    constructor(private readonly usersService: UsersService) {}
+    constructor(@Inject(UsersService) private readonly usersService: UsersService) {}
 
     @Post()
     @UseGuards(UserAuthGuard, AdminGuard)
@@ -43,11 +45,10 @@ export class UsersController {
     }
 
     @Get()
-    @UseGuards(UserAuthGuard, AdminGuard)
+    @UseGuards(UserAuthGuard)
     @ApiBearerAuth()
-    @ApiOperation({ summary: 'Get all users (Admin only)' })
+    @ApiOperation({ summary: 'Get all users' })
     @ApiResponse({ status: 200, description: 'Return all users' })
-    @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
     findAll() {
         return this.usersService.findAll();
     }

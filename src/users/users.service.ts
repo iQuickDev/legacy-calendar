@@ -1,19 +1,20 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import 'multer';
+import { ConflictException, Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { Prisma, User as UserModel } from '@prisma/client';
+import { Prisma, User as UserModel } from '../../prisma/generated/client.js';
 import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UserDto } from './dto/user.dto';
-import { UsersRepository } from './users.repository';
+import { CreateUserDto } from './dto/create-user.dto.js';
+import { UpdateUserDto } from './dto/update-user.dto.js';
+import { UserDto } from './dto/user.dto.js';
+import { UsersRepository } from './users.repository.js';
 
 @Injectable()
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
 
-    constructor(private readonly usersRepo: UsersRepository) {}
+    constructor(@Inject(UsersRepository) private readonly usersRepo: UsersRepository) {}
 
     async create(createUserDto: CreateUserDto): Promise<UserDto> {
         try {

@@ -9,22 +9,23 @@ import {
     Request,
     ParseIntPipe,
     Patch,
-    Query
+    Query,
+    Inject
 } from '@nestjs/common';
-import { EventsService } from './events.service';
-import { CreateEventDto } from './dto/create-event.dto';
-import { UpdateEventDto } from './dto/update-event.dto';
-import { ParticipateDto } from './dto/participate.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { EventsService } from './events.service.js';
+import { CreateEventDto } from './dto/create-event.dto.js';
+import { UpdateEventDto } from './dto/update-event.dto.js';
+import { ParticipateDto } from './dto/participate.dto.js';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
-import { EventResponseDto } from './dto/event-response.dto';
-import { type RequestWithUser } from '../auth/interfaces/request-with-user.interface';
-import { FindEventsQueryDto } from './dto/find-events-query.dto';
+import { EventResponseDto } from './dto/event-response.dto.js';
+import { type RequestWithUser } from '../auth/interfaces/request-with-user.interface.js';
+import { FindEventsQueryDto } from './dto/find-events-query.dto.js';
 
 @ApiTags('events')
 @Controller('events')
 export class EventsController {
-    constructor(private readonly eventsService: EventsService) {}
+    constructor(@Inject(EventsService) private readonly eventsService: EventsService) {}
 
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)

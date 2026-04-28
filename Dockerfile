@@ -1,5 +1,5 @@
 # --- STAGE 1: Build the application ---
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # --- STAGE 2: Install production dependencies ---
-FROM node:20-alpine AS prod-deps
+FROM node:22-alpine AS prod-deps
 
 WORKDIR /app
 
@@ -30,11 +30,10 @@ COPY prisma ./prisma/
 # Need build-base tools for native modules like bcrypt
 RUN apk add --no-cache python3 make g++ && \
     npm ci --omit=dev && \
-    npx prisma generate && \
     apk del python3 make g++
 
 # --- STAGE 3: Final Runner Image ---
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
@@ -46,6 +45,7 @@ ENV NODE_OPTIONS=--openssl-legacy-provider
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma ./prisma
 
 # Create uploads directory and set permissions for the node user
 RUN mkdir -p /app/uploads/profile-pictures && chown -R node:node /app/uploads
@@ -57,4 +57,4 @@ USER node
 EXPOSE 3000
 
 # Start the application
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main.js"]

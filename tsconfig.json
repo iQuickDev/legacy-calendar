@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolvePackageJsonExports": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2023",
+    "strict": true,
     "esModuleInterop": true,
     "isolatedModules": true,
     "declaration": true,
@@ -10,16 +11,16 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
     "incremental": false,
     "skipLibCheck": true,
     "strictNullChecks": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "noFallthroughCasesInSwitch": false,
+    "types": ["multer"]
+  },
+  "exclude": ["node_modules", "dist", "scratch"]
 }
