@@ -67,6 +67,20 @@ export class EventsController {
 
     @ApiBearerAuth()
     @UseGuards(JwtAuthGuard)
+    @Get('upcoming')
+    @ApiOperation({ summary: 'Get upcoming events' })
+    @ApiResponse({
+        status: 200,
+        description: 'Return upcoming events',
+        type: EventResponseDto,
+        isArray: true
+    })
+    findUpcoming(@Request() req: RequestWithUser) {
+        return this.eventsService.findUpcoming(req.user.userId as number);
+    }
+
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'Get an event by ID' })
     @ApiResponse({ status: 200, description: 'Return event', type: EventResponseDto })

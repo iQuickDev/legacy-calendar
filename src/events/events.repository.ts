@@ -47,6 +47,25 @@ export class EventsRepository {
         });
     }
 
+    async findUpcoming(userId: number): Promise<EventWithRelations[]> {
+        return this.prisma.event.findMany({
+            where: {
+                AND: [
+                    this.buildVisibleEventsWhere(userId),
+                    {
+                        OR: [
+                            { endTime: { gte: new Date() } },
+                            { AND: [{ endTime: null }, { startTime: { gte: new Date() } }] }
+                        ]
+                    }
+                ]
+            },
+            include: EVENT_INCLUDE,
+            orderBy: [{ startTime: 'asc' }, { id: 'asc' }],
+            take: 10
+        });
+    }
+
     async findOne(id: number, userId?: number): Promise<EventWithRelations | null> {
         return this.prisma.event.findFirst({
             where: {

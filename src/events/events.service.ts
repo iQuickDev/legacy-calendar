@@ -69,6 +69,11 @@ export class EventsService {
         return events.map((event) => mapEventToDto(event));
     }
 
+    async findUpcoming(userId: number): Promise<EventResponseDto[]> {
+        const events = await this.eventsRepo.findUpcoming(userId);
+        return events.map((event) => mapEventToDto(event));
+    }
+
     async findOne(id: number, userId?: number): Promise<EventResponseDto> {
         const event = await this.eventsRepo.findOne(id, userId);
         if (!event) {
