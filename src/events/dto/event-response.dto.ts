@@ -41,7 +41,13 @@ export class EventResponseDto {
     @ApiProperty({ type: String, example: 'Team Standup', description: 'Title of the event' })
     title!: string;
 
-    @ApiProperty({ type: String, example: '#ffffff', description: 'Color of the event', required: false, nullable: true })
+    @ApiProperty({
+        type: String,
+        example: '#ffffff',
+        description: 'Color of the event',
+        required: false,
+        nullable: true
+    })
     color?: string | null;
 
     @ApiProperty({
