@@ -8,6 +8,11 @@ export class CreateEventDto {
     @IsNotEmpty()
     title!: string;
 
+    @ApiProperty({ type: String, example: '#ffffff', description: 'Color of the event', required: false })
+    @IsString()
+    @IsOptional()
+    color?: string;
+
     @ApiProperty({ type: String, example: 'Weekly sync with the team', description: 'Description', required: false })
     @IsString()
     @IsOptional()
