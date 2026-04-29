@@ -36,6 +36,7 @@ export function mapEventToDto(event: EventWithRelations): EventResponseDto {
     return {
         id: event.id,
         title: event.title,
+        color: event.color,
         description: event.description,
         location: event.location,
         startTime: event.startTime,

@@ -31,6 +31,7 @@ model FcmToken {
 model Event {
   id                    Int              @id @default(autoincrement())
   title                 String
+  color                 String?          @default("#ffffff")
   description           String?
   location              String?
   startTime             DateTime
