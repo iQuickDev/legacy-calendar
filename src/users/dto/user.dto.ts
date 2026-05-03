@@ -15,4 +15,7 @@ export class UserDto {
         nullable: true
     })
     profilePicture?: string | null;
+
+    @ApiProperty({ type: Boolean, example: false, description: 'Whether the user is an admin' })
+    isAdmin!: boolean;
 }

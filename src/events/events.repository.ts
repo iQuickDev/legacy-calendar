@@ -4,16 +4,16 @@ import { Prisma, Event, InviteStatus } from '../../prisma/generated/client.js';
 import { ParticipateDto } from './dto/participate.dto.js';
 
 export const EVENT_INCLUDE = {
-    host: { select: { id: true, username: true, profilePicture: true } },
+    host: { select: { id: true, username: true, profilePicture: true, isAdmin: true } },
     participants: {
         include: {
-            user: { select: { id: true, username: true, profilePicture: true } }
+            user: { select: { id: true, username: true, profilePicture: true, isAdmin: true } }
         }
     },
     rideAssignments: {
         include: {
-            driver: { select: { id: true, username: true, profilePicture: true } },
-            passenger: { select: { id: true, username: true, profilePicture: true } }
+            driver: { select: { id: true, username: true, profilePicture: true, isAdmin: true } },
+            passenger: { select: { id: true, username: true, profilePicture: true, isAdmin: true } }
         }
     }
 } satisfies Prisma.EventInclude;

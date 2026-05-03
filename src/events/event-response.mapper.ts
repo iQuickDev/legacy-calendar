@@ -2,11 +2,12 @@ import { EventParticipantDto, EventResponseDto } from './dto/event-response.dto.
 import { UserDto } from '../users/dto/user.dto.js';
 import { EventWithRelations } from './events.repository.js';
 
-function mapUserDto(user: { id: number; username: string; profilePicture: string | null }): UserDto {
+function mapUserDto(user: { id: number; username: string; profilePicture: string | null; isAdmin: boolean }): UserDto {
     return {
         id: user.id,
         username: user.username,
-        profilePicture: user.profilePicture
+        profilePicture: user.profilePicture,
+        isAdmin: user.isAdmin
     };
 }
 
