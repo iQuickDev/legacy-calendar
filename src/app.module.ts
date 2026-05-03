@@ -10,6 +10,9 @@ import { NotificationsModule } from './notifications/notifications.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
 
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ImpersonateInterceptor } from './auth/interceptors/impersonate.interceptor.js';
+
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
@@ -21,6 +24,12 @@ import { UploadsModule } from './uploads/uploads.module.js';
         UploadsModule
     ],
     controllers: [AppController],
-    providers: [AppService]
+    providers: [
+        AppService,
+        {
+            provide: APP_INTERCEPTOR,
+            useClass: ImpersonateInterceptor
+        }
+    ]
 })
 export class AppModule {}
