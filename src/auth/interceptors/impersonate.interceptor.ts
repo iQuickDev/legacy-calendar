@@ -36,8 +36,11 @@ export class ImpersonateInterceptor implements NestInterceptor {
                         // If user not found, just continue as the original user
                     }
                 }
-            } else {
-                this.logger.warn(`Impersonation attempt by non-admin or unauthenticated user: ${request.user?.username || 'unknown'}`);
+            } else if (request.user) {
+                // Only warn if an authenticated non-admin user is attempting impersonation.
+                // Unauthenticated requests (public endpoints) still receive the header from
+                // the frontend, so we silently ignore those to avoid log spam.
+                this.logger.warn(`Impersonation attempt by non-admin user: ${request.user.username}`);
             }
         }
 
