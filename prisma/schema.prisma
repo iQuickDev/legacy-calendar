@@ -18,6 +18,8 @@ model User {
   rideAssignmentsAsDriver    RideAssignment[] @relation("RideAssignmentDriver")
   rideAssignmentsAsPassenger RideAssignment[] @relation("RideAssignmentPassenger")
   isAdmin                    Boolean          @default(false)
+  chatMessages               ChatMessage[]
+  chatReactions              ChatReaction[]
 }
 
 model FcmToken {
@@ -53,6 +55,7 @@ model Event {
   participants          Attendance[]
   host                  User             @relation("EventHost", fields: [hostId], references: [id])
   rideAssignments       RideAssignment[]
+  chatMessages          ChatMessage[]
 }
 
 model Attendance {
@@ -90,4 +93,40 @@ enum InviteStatus {
   PENDING
   ACCEPTED
   DECLINED
+}
+
+enum ChatMediaType {
+  image
+  gif
+  video
+  audio
+}
+
+model ChatMessage {
+  id        Int             @id @default(autoincrement())
+  eventId   Int
+  authorId  Int
+  text      String?
+  mediaUrl  String?
+  mediaType ChatMediaType?
+  isPinned  Boolean         @default(false)
+  isEdited  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  event   Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author  User           @relation(fields: [authorId], references: [id])
+  reactions ChatReaction[]
+}
+
+model ChatReaction {
+  id        Int    @id @default(autoincrement())
+  messageId Int
+  userId    Int
+  emoji     String
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId, emoji])
 }

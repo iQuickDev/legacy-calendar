@@ -63,11 +63,11 @@ export class NotificationsService implements OnModuleInit {
         try {
             await admin.messaging().send({
                 token,
-                data: {
+                notification: {
                     title,
-                    body,
-                    ...data
-                }
+                    body
+                },
+                data
             });
             this.logger.log(`Notification sent to ${token}`);
         } catch (error) {
@@ -83,11 +83,11 @@ export class NotificationsService implements OnModuleInit {
         try {
             const response = await admin.messaging().sendEachForMulticast({
                 tokens,
-                data: {
+                notification: {
                     title,
-                    body,
-                    ...data
-                }
+                    body
+                },
+                data
             });
             this.logger.log(`Multicast sent: ${response.successCount} success, ${response.failureCount} failure`);
         } catch (error) {

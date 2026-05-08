@@ -76,6 +76,13 @@ export class EventsRepository {
         });
     }
 
+    async findById(id: number): Promise<EventWithRelations | null> {
+        return this.prisma.event.findUnique({
+            where: { id },
+            include: EVENT_INCLUDE
+        });
+    }
+
     async remove(id: number): Promise<Event> {
         return this.prisma.event.delete({ where: { id } });
     }

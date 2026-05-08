@@ -9,6 +9,7 @@ import { ConfigModule } from '@nestjs/config';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
+import { ChatModule } from './chat/chat.module.js';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ImpersonateInterceptor } from './auth/interceptors/impersonate.interceptor.js';
@@ -21,7 +22,8 @@ import { ImpersonateInterceptor } from './auth/interceptors/impersonate.intercep
         UsersModule,
         EventsModule,
         NotificationsModule,
-        UploadsModule
+        UploadsModule,
+        ChatModule
     ],
     controllers: [AppController],
     providers: [
