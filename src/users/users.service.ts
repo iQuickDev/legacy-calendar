@@ -10,6 +10,8 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UserDto } from './dto/user.dto.js';
 import { UsersRepository } from './users.repository.js';
 
+const BCRYPT_COST_FACTOR = 12;
+
 @Injectable()
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
@@ -18,7 +20,7 @@ export class UsersService {
 
     async create(createUserDto: CreateUserDto): Promise<UserDto> {
         try {
-            const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+            const hashedPassword = await bcrypt.hash(createUserDto.password, BCRYPT_COST_FACTOR);
             return await this.usersRepo.create({
                 username: createUserDto.username,
                 password: hashedPassword
@@ -55,7 +57,7 @@ export class UsersService {
             const updateData: Prisma.UserUpdateInput = { ...updateUserDto };
 
             if (updateUserDto.password !== undefined) {
-                updateData.password = await bcrypt.hash(updateUserDto.password, 10);
+                updateData.password = await bcrypt.hash(updateUserDto.password, BCRYPT_COST_FACTOR);
             }
 
             return await this.usersRepo.update(id, updateData);
