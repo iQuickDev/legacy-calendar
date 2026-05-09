@@ -19,8 +19,7 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false,
-    "types": ["multer"]
+    "noFallthroughCasesInSwitch": false
   },
   "exclude": ["node_modules", "dist", "scratch"]
 }
