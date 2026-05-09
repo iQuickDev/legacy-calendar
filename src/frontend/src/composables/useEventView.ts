@@ -35,7 +35,9 @@ const dragOverDriverId = ref<number | null>(null);
 
 export function hasLocalChatAccess(event: Event | null, currentUserId: number | null | undefined) {
     if (!event || currentUserId == null) return false;
-    if (event.hostId === currentUserId) return true;
+
+    const isHost = event.hostId === currentUserId || event.host?.id === currentUserId;
+    if (isHost) return true;
 
     return (
         event.participants?.some(

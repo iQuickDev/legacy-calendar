@@ -53,7 +53,7 @@ import UserAvatar from '../../UserAvatar.vue';
 const recentMessages = ref<ChatMessage[]>([]);
 
 const loadRecentMessages = async () => {
-    if (!props.event?.id) {
+    if (!props.event?.id || !canAccessChat.value) {
         recentMessages.value = [];
         return;
     }
@@ -71,10 +71,12 @@ onMounted(() => {
 });
 
 watch(
-    () => props.event?.id,
+    () => [props.event?.id, canAccessChat.value],
     () => {
         void loadRecentMessages();
-        void getOrResolveCoords(props.event);
+        if (props.event) {
+            void getOrResolveCoords(props.event);
+        }
     },
     { immediate: true }
 );
@@ -98,7 +100,11 @@ watch(
                 <span class="text-sm font-semibold tracking-wider uppercase">Recent Messages</span>
             </div>
 
-            <div class="group relative cursor-pointer overflow-hidden rounded-2xl" @click="emit('open-chat')">
+            <div v-if="recentMessages.length === 0" class="flex items-center justify-center">
+                <span class="text-zinc-500">No messages yet.</span>
+            </div>
+
+            <div v-else class="group relative cursor-pointer overflow-hidden rounded-2xl" @click="emit('open-chat')">
                 <div class="flex max-h-[150px] flex-col gap-3">
                     <div
                         v-for="msg in recentMessages"
