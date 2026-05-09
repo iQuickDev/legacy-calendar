@@ -181,7 +181,12 @@ defineExpose({
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-bold tracking-wider text-zinc-500 uppercase">Start Time</label>
                     <div class="flex gap-2">
-                        <DatePicker v-model="startDateOnly" class="flex-1 rounded-xl!" placeholder="Date" />
+                        <DatePicker
+                            v-model="startDateOnly"
+                            dateFormat="d MM yy"
+                            class="flex-1 rounded-xl!"
+                            placeholder="Date"
+                        />
                         <DatePicker v-model="startTimeOnly" timeOnly class="w-24 rounded-xl!" placeholder="Time" />
                     </div>
                 </div>
@@ -189,7 +194,12 @@ defineExpose({
                 <div class="flex flex-col gap-2">
                     <label class="text-sm font-bold tracking-wider text-zinc-500 uppercase">End Time (Optional)</label>
                     <div class="flex gap-2">
-                        <DatePicker v-model="endDateOnly" class="flex-1 rounded-xl!" placeholder="Date" />
+                        <DatePicker
+                            v-model="endDateOnly"
+                            dateFormat="d MM yy"
+                            class="flex-1 rounded-xl!"
+                            placeholder="Date"
+                        />
                         <DatePicker v-model="endTimeOnly" timeOnly class="w-24 rounded-xl!" placeholder="Time" />
                     </div>
                 </div>
@@ -199,7 +209,12 @@ defineExpose({
                         >Participation Deadline</label
                     >
                     <div class="flex gap-2">
-                        <DatePicker v-model="deadlineDateOnly" class="flex-1 rounded-xl!" placeholder="Date" />
+                        <DatePicker
+                            v-model="deadlineDateOnly"
+                            dateFormat="d MM yy"
+                            class="flex-1 rounded-xl!"
+                            placeholder="Date"
+                        />
                         <DatePicker v-model="deadlineTimeOnly" timeOnly class="w-24 rounded-xl!" placeholder="Time" />
                     </div>
                     <small class="text-center text-zinc-500">
