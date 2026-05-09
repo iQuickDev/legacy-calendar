@@ -36,4 +36,4 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 firebase.json
 
 # Dev uploads
-uploads
+./uploads
