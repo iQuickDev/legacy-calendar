@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-05T17:20:30Z",
+  "title": "Design System: Legacy Calendar",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Focus Blue", "canonical": "#3b82f6", "tonalRamp": ["#1e3a8a", "#1e40af", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"] },
+      "surface-950": { "role": "neutral", "displayName": "OLED Black", "canonical": "#000000", "tonalRamp": ["#000000", "#09090b", "#18181b", "#27272a", "#3f3f46", "#52525b", "#71717a", "#a1a1aa"] }
+    },
+    "shadows": [
+      { "name": "structural-glow", "value": "0 10px 30px -10px rgba(0, 0, 0, 0.5)", "purpose": "Lift overlays off the void." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action trigger.",
+      "html": "<button class=\"ds-btn-primary\">CONTINUE</button>",
+      "css": ".ds-btn-primary { background: #3b82f6; color: #000; padding: 12px 24px; font-weight: 700; border: none; border-radius: 12px; transition: opacity 0.2s; cursor: pointer; } .ds-btn-primary:hover { opacity: 0.9; }"
+    },
+    {
+      "name": "Intimate Card",
+      "kind": "card",
+      "description": "Information container for events.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Event Title</h3><p class=\"ds-card-body\">Friday, 8:00 PM</p></div>",
+      "css": ".ds-card { background: #0a0a0a; border: 1px solid #262626; border-radius: 16px; padding: 24px; } .ds-card-title { color: #fff; margin: 0 0 8px 0; font-weight: 700; } .ds-card-body { color: #a3a3a3; margin: 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Obsidian Focus",
+    "overview": "Legacy Calendar is an uncompromisingly dark, high-utility tool designed for intimate friend groups. It rejects generic SaaS aesthetics for a deep-night, high-contrast palette optimized for OLED displays.",
+    "keyCharacteristics": [
+      "Pure Black Foundation",
+      "Atmospheric Utility",
+      "Tactile Softness"
+    ],
+    "rules": [
+      { "name": "The Void Rule", "body": "Backgrounds must be absolute #000000. Lighter dark mode grays are prohibited for root surfaces.", "section": "colors" },
+      { "name": "The Border-First Rule", "body": "Depth is primarily conveyed via subtle #262626 borders.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use absolute #000000 for the page background.",
+      "Do use rounded-2xl for large overlays.",
+      "Do maintain high contrast ratios (minimum 7:1) for primary text."
+    ],
+    "donts": [
+      "Don't use Light Mode. No blinding whites.",
+      "Don't use generic SaaS dashboard-cream.",
+      "Don't use thick colored borders as accents."
+    ]
+  }
+}

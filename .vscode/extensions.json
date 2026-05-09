@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "Vue.volar",
+    "bradlc.vscode-tailwindcss",
+    "github.vscode-github-actions",
+    "dbaeumer.vscode-eslint",
+    "yoavbls.pretty-ts-errors",
+    "prisma.prisma",
+    "esbenp.prettier-vscode"
+  ]
+}

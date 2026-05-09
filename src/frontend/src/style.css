@@ -1,0 +1,252 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Outfit:wght@100..900&family=Noto+Color+Emoji&display=swap');
+@import 'primeicons/primeicons.css';
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+    --font-body: 'Inter', sans-serif;
+    --font-display: 'Outfit', sans-serif;
+    --font-emoji: 'Noto Color Emoji', sans-serif;
+
+    font-family: var(--font-body);
+    color: #ffffff;
+    background-color: #000000;
+    color-scheme: dark;
+
+    /* Obsidian Easing */
+    --ease-obsidian: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.p-dialog-title,
+.p-menubar-root-list > .p-menuitem > .p-menuitem-content .p-menuitem-text,
+.weekday-header,
+.day-number,
+.pwa-mobile-show button span,
+.display-text {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+}
+
+h1 {
+    font-weight: 800;
+}
+
+h2,
+h3,
+.p-dialog-title {
+    font-weight: 700;
+}
+
+.p-button-label,
+.p-tag-value {
+    font-family: var(--font-display);
+    font-weight: 600;
+}
+
+.p-menubar {
+    border: none !important;
+    background: #000000 !important;
+}
+
+.p-toast {
+    opacity: 0.95;
+}
+
+.p-toast-message {
+    background: #000000 !important;
+    border: 1px solid #262626 !important;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8) !important;
+    backdrop-filter: blur(12px);
+    border-radius: 16px !important;
+}
+
+.p-toast-message-content {
+    padding: 1rem !important;
+}
+
+.p-toast-summary {
+    font-weight: 700 !important;
+    color: #ffffff !important;
+}
+
+.p-toast-detail {
+    color: #a3a3a3 !important;
+    font-size: 0.875rem !important;
+}
+
+.p-toast-icon-wrapper {
+    color: var(--p-primary-color) !important;
+}
+
+.p-toast-message-icon {
+    font-size: 1.25rem !important;
+}
+
+/* Status Specific Borders */
+.p-toast-message-success {
+    border-left-color: #10b981 !important;
+}
+
+.p-toast-message-info {
+    border-left-color: #3b82f6 !important;
+}
+
+.p-toast-message-warn {
+    border-left-color: #f59e0b !important;
+}
+
+.p-toast-message-error {
+    border-left-color: #ef4444 !important;
+}
+
+/* Animation tweaks */
+.p-toast-message-enter-from {
+    transform: translateX(100%);
+    opacity: 0;
+}
+
+@media screen and (max-width: 640px) {
+    .p-toast {
+        width: calc(100% - 2rem) !important;
+        left: 1rem !important;
+        right: 1rem !important;
+        top: 1rem !important;
+    }
+
+    .p-toast-message-enter-from {
+        transform: translateY(-100%) !important;
+        opacity: 0 !important;
+    }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #262626;
+    border-radius: 20px;
+    border: 3px solid #000000;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #404040;
+}
+
+/* Staggered Reveals */
+@keyframes reveal-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stagger-reveal > * {
+    opacity: 0;
+    animation: reveal-up 0.6s var(--ease-obsidian) forwards;
+}
+
+.stagger-reveal > *:nth-child(1) {
+    animation-delay: 0.05s;
+}
+.stagger-reveal > *:nth-child(2) {
+    animation-delay: 0.1s;
+}
+.stagger-reveal > *:nth-child(3) {
+    animation-delay: 0.15s;
+}
+.stagger-reveal > *:nth-child(4) {
+    animation-delay: 0.2s;
+}
+.stagger-reveal > *:nth-child(5) {
+    animation-delay: 0.25s;
+}
+
+/* Page Transitions */
+.slide-left-enter-active,
+.slide-left-leave-active,
+.slide-right-enter-active,
+.slide-right-leave-active,
+.fade-enter-active,
+.fade-leave-active {
+    transition: all 0.4s var(--ease-obsidian);
+}
+
+.slide-left-enter-from {
+    opacity: 0;
+    transform: translateX(30px);
+}
+
+.slide-left-leave-to {
+    opacity: 0;
+    transform: translateX(-30px);
+}
+
+.slide-right-enter-from {
+    opacity: 0;
+    transform: translateX(-30px);
+}
+
+.slide-right-leave-to {
+    opacity: 0;
+    transform: translateX(30px);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+body {
+    margin: 0;
+    overflow-x: hidden;
+    background-color: #000000;
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #262626 transparent;
+}
+
+/* Ensure centered content stays centered by ignoring scrollbar width in layout */
+.p-dialog-content,
+.p-scrollpanel-content,
+.upcoming-container {
+    scrollbar-gutter: stable both-edges;
+}
+
+/* PWA Mobile Layout */
+.pwa-mobile-show {
+    display: none !important;
+}
+
+@media screen and (max-width: 64rem) {
+    .pwa-mobile-show {
+        display: block !important;
+    }
+    .pwa-mobile-hidden {
+        display: none !important;
+    }
+    .p-menubar-button {
+        display: none !important;
+    }
+}
