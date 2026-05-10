@@ -1,7 +1,7 @@
 import 'multer';
 import { ConflictException, Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
 import { Prisma, User as UserModel } from '../../prisma/generated/client.js';
-import sharp from 'sharp';
+
 import { mkdir } from 'fs/promises';
 import * as path from 'path';
 import { CreateUserDto } from './dto/create-user.dto.js';
@@ -82,7 +82,10 @@ export class UsersService {
         const filename = `${id}.webp`;
         const filePath = path.join(uploadDir, filename);
 
-        await sharp(file.buffer).resize(128, 128).webp().toFile(filePath);
+        /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+        // @ts-expect-error Bun.Image is not in the types yet
+        await new Bun.Image(file.buffer).resize(128, 128).webp().write(filePath);
+        /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 
         const publicUrl = `/uploads/profile-pictures/${filename}`;
         return this.usersRepo.update(id, { profilePicture: publicUrl });

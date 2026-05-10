@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import sharp from 'sharp';
+
 import ffmpeg from 'fluent-ffmpeg';
 
 @Injectable()
@@ -7,13 +7,16 @@ export class MediaProcessorService {
     private readonly logger = new Logger(MediaProcessorService.name);
 
     async processImage(inputPath: string, outputPath: string): Promise<void> {
-        await sharp(inputPath)
+        /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+        // @ts-expect-error Bun.Image is not in the types yet
+        await new Bun.Image(inputPath)
             .resize(1920, 1920, {
                 fit: 'inside',
                 withoutEnlargement: true
             })
-            .jpeg({ quality: 80 })
-            .toFile(outputPath);
+            .webp({ quality: 80 })
+            .write(outputPath);
+        /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
     }
 
     async processVideo(inputPath: string, outputPath: string): Promise<void> {

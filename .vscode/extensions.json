@@ -6,6 +6,7 @@
     "dbaeumer.vscode-eslint",
     "yoavbls.pretty-ts-errors",
     "prisma.prisma",
-    "esbenp.prettier-vscode"
+    "esbenp.prettier-vscode",
+    "oven.bun-vscode"
   ]
 }
