@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res, NotFoundException, Inject } from '@nestjs/common';
+import { Controller, Get, Req, Res, NotFoundException, Inject, Param } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import * as path from 'path';
@@ -9,18 +9,23 @@ import { lookup } from 'mime-types';
 export class UploadsController {
     constructor(@Inject(ConfigService) private configService: ConfigService) {}
 
-    @Get('*path')
-    getUpload(@Req() req: Request, @Res() res: Response) {
-        const relativePath = req.path.replace(/^\/uploads\/?/, '');
-        const uploadsRoot = path.join(process.cwd(), 'uploads');
-        const filePath = path.normalize(path.join(uploadsRoot, relativePath));
+    @Get('{*path}')
+    getUpload(@Param('path') wildcardPath: string | string[] | undefined, @Req() req: Request, @Res() res: Response) {
+        const relativePath = Array.isArray(wildcardPath) ? wildcardPath.join('/') : (wildcardPath ?? '');
+        const normalizedRelativePath = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+        const uploadsRoot = path.resolve(process.cwd(), 'uploads');
+        const filePath = path.resolve(uploadsRoot, normalizedRelativePath);
+        const relativeToRoot = path.relative(uploadsRoot, filePath);
 
-        if (!filePath.startsWith(`${uploadsRoot}${path.sep}`) && filePath !== uploadsRoot) {
+        if (relativeToRoot.startsWith('..') || path.isAbsolute(relativeToRoot)) {
             throw new NotFoundException('File not found');
         }
 
         if (existsSync(filePath)) {
             const stat = statSync(filePath);
+            if (!stat.isFile()) {
+                throw new NotFoundException('File not found');
+            }
             const etag = `W/"${stat.size.toString(16)}-${stat.mtimeMs.toString(16)}"`;
 
             res.set('ETag', etag);
@@ -43,7 +48,7 @@ export class UploadsController {
         const remoteUrl = this.configService.get<string>('REMOTE_UPLOADS_URL');
         if (remoteUrl) {
             const sanitizedRemoteUrl = remoteUrl.endsWith('/') ? remoteUrl.slice(0, -1) : remoteUrl;
-            return res.redirect(`${sanitizedRemoteUrl}/uploads/${relativePath}`);
+            return res.redirect(`${sanitizedRemoteUrl}/uploads/${normalizedRelativePath}`);
         }
 
         throw new NotFoundException('File not found');
