@@ -15,7 +15,7 @@ FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
 
 # Copy source code and config
-COPY package.json ./
+COPY package.json tsconfig.json ./
 COPY prisma ./prisma/
 COPY src ./src/
 
