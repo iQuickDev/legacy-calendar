@@ -22,11 +22,8 @@ export default defineConfig({
                 changeOrigin: true,
                 ws: true,
                 rewrite: (path) => path.replace(/^\/api/, ''),
-                configure: (proxy, options) => {
-                    void options;
-                    proxy.on('proxyReqWs', (proxyReq, req, socket) => {
-                        void proxyReq;
-                        void req;
+                configure: (proxy) => {
+                    proxy.on('proxyReqWs', (_proxyReq, _req, socket) => {
                         if (socket && !(socket as any).destroySoon) {
                             (socket as any).destroySoon = (socket as any).destroy;
                         }
