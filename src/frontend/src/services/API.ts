@@ -1,17 +1,9 @@
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 export const baseURL = import.meta.env.VITE_API_URL;
-export const uploadsBaseURL =
-    import.meta.env.DEV && baseURL
-        ? baseURL
-        : (import.meta.env.VITE_UPLOADS_API_URL ?? baseURL ?? window.location.origin);
-export const socketBaseURL =
-    import.meta.env.VITE_WS_URL || (baseURL && /^https?:\/\//i.test(baseURL) ? baseURL : window.location.origin);
-export const socketPath = import.meta.env.VITE_WS_URL
-    ? '/socket.io'
-    : baseURL && /^https?:\/\//i.test(baseURL)
-      ? '/socket.io'
-      : `${String(baseURL || '/api').replace(/\/$/, '')}/socket.io`;
+export const uploadsBaseURL = import.meta.env.VITE_UPLOADS_URL || baseURL;
+export const socketBaseURL = import.meta.env.VITE_WS_URL || baseURL;
+export const socketPath = '/socket.io';
 
 import type { CreateUserDto, UpdateUserDto, User } from '../types/User';
 import type { AuthLoginDto, ChangePasswordDto } from '../types/Auth';

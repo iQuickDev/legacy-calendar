@@ -16,6 +16,7 @@ COPY --from=install /temp/prod/node_modules node_modules
 
 # Copy source code and config
 COPY package.json tsconfig.json ./
+COPY .env* ./
 COPY prisma ./prisma/
 COPY src ./src/
 

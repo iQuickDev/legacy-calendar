@@ -171,8 +171,7 @@ Create a `.env` file in `src/backend` using the example below:
 ```bash
 DATABASE_URL=postgresql://user:password@host/database
 JWT_SECRET=your-secret-key-here
-JWT_EXPIRES_IN=60m
-REMOTE_UPLOADS_URL=https://calendar-api.legacy-group.tech
+JWT_EXPIRES_IN=30d
 ```
 
 Then run Prisma and start the API:
