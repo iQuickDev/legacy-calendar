@@ -13,11 +13,13 @@ export class UploadsController {
     getUpload(@Param('path') wildcardPath: string | string[] | undefined, @Req() req: Request, @Res() res: Response) {
         const relativePath = Array.isArray(wildcardPath)
             ? wildcardPath.join('/')
-            : (wildcardPath ?? '').replace(/^\/+/, '');
-        const uploadsRoot = path.join(process.cwd(), 'uploads');
-        const filePath = path.normalize(path.join(uploadsRoot, relativePath));
+            : (wildcardPath ?? '');
+        const normalizedRelativePath = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
+        const uploadsRoot = path.resolve(process.cwd(), 'uploads');
+        const filePath = path.resolve(uploadsRoot, normalizedRelativePath);
+        const relativeToRoot = path.relative(uploadsRoot, filePath);
 
-        if (!filePath.startsWith(`${uploadsRoot}${path.sep}`) && filePath !== uploadsRoot) {
+        if (relativeToRoot.startsWith('..') || path.isAbsolute(relativeToRoot)) {
             throw new NotFoundException('File not found');
         }
 
@@ -48,7 +50,7 @@ export class UploadsController {
         const remoteUrl = this.configService.get<string>('REMOTE_UPLOADS_URL');
         if (remoteUrl) {
             const sanitizedRemoteUrl = remoteUrl.endsWith('/') ? remoteUrl.slice(0, -1) : remoteUrl;
-            return res.redirect(`${sanitizedRemoteUrl}/uploads/${relativePath}`);
+            return res.redirect(`${sanitizedRemoteUrl}/uploads/${normalizedRelativePath}`);
         }
 
         throw new NotFoundException('File not found');
