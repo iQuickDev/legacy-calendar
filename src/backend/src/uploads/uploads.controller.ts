@@ -9,7 +9,7 @@ import { lookup } from 'mime-types';
 export class UploadsController {
     constructor(@Inject(ConfigService) private configService: ConfigService) {}
 
-    @Get('*')
+    @Get('*path')
     getUpload(@Req() req: Request, @Res() res: Response) {
         const relativePath = req.path.replace(/^\/uploads\/?/, '');
         const uploadsRoot = path.join(process.cwd(), 'uploads');
