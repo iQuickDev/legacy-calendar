@@ -22,22 +22,26 @@ export default defineConfig({
                 changeOrigin: true,
                 ws: true,
                 rewrite: (path) => path.replace(/^\/api/, ''),
-                configure: (proxy) => {
-                    proxy.on('proxyReqWs', (...args) => {
-                        const socket = args[2] as any;
+                configure: (proxy, options) => {
+                    void options;
+                    proxy.on('proxyReqWs', (proxyReq, req, socket) => {
+                        void proxyReq;
+                        void req;
                         if (socket && !(socket as any).destroySoon) {
                             (socket as any).destroySoon = (socket as any).destroy;
                         }
                     });
-                    proxy.on('proxyRes', (...args) => {
-                        const res = args[2] as any;
+                    proxy.on('proxyRes', (proxyRes, req, res) => {
+                        void proxyRes;
+                        void req;
                         const socket = (res as any).socket || (res as any).connection;
                         if (socket && !(socket as any).destroySoon) {
                             (socket as any).destroySoon = (socket as any).destroy;
                         }
                     });
-                    proxy.on('error', (...args) => {
-                        const res = args[2] as any;
+                    proxy.on('error', (err, req, res) => {
+                        void err;
+                        void req;
                         const socket = (res as any).socket || (res as any).connection;
                         if (socket && !(socket as any).destroySoon) {
                             (socket as any).destroySoon = (socket as any).destroy;
