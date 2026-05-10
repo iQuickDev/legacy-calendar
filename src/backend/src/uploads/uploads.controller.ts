@@ -11,9 +11,7 @@ export class UploadsController {
 
     @Get('{*path}')
     getUpload(@Param('path') wildcardPath: string | string[] | undefined, @Req() req: Request, @Res() res: Response) {
-        const relativePath = Array.isArray(wildcardPath)
-            ? wildcardPath.join('/')
-            : (wildcardPath ?? '');
+        const relativePath = Array.isArray(wildcardPath) ? wildcardPath.join('/') : (wildcardPath ?? '');
         const normalizedRelativePath = relativePath.replace(/\\/g, '/').replace(/^\/+/, '');
         const uploadsRoot = path.resolve(process.cwd(), 'uploads');
         const filePath = path.resolve(uploadsRoot, normalizedRelativePath);
