@@ -22,6 +22,13 @@ type SocketUser = {
     isAdmin: boolean;
 };
 
+type JwtPayload = {
+    userId?: number;
+    sub?: string;
+    username?: string;
+    isAdmin?: boolean;
+};
+
 @WebSocketGateway({
     cors: {
         origin: '*'
@@ -41,7 +48,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
     afterInit(server: Server) {
         server.use((socket, next) => {
-            this.authenticateSocket(socket, next);
+            void this.authenticateSocket(socket, next);
         });
     }
 
@@ -70,22 +77,22 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
         if (!isParticipant) {
             client.emit('error', { code: 403, message: 'Forbidden' });
-            client.leave(roomName);
+            await client.leave(roomName);
             return;
         }
 
-        client.join(roomName);
+        await client.join(roomName);
         this.logger.log(`User ${user.userId} joined room ${roomName}`);
     }
 
     @SubscribeMessage('leaveRoom')
-    handleLeaveRoom(@ConnectedSocket() client: Socket, @MessageBody('eventId') eventIdInput: number) {
+    async handleLeaveRoom(@ConnectedSocket() client: Socket, @MessageBody('eventId') eventIdInput: number) {
         const eventId = this.parseEventId(eventIdInput);
         if (eventId === null) {
             return;
         }
 
-        client.leave(`chat:${eventId}`);
+        await client.leave(`chat:${eventId}`);
     }
 
     @SubscribeMessage('sendMessage')
@@ -292,9 +299,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
                 return;
             }
 
-            const payload = await this.jwtService.verifyAsync(token, {
+            const payload = (await this.jwtService.verifyAsync(token, {
                 secret: this.configService.getOrThrow<string>('JWT_SECRET')
-            });
+            })) as unknown as JwtPayload;
             const user: SocketUser = {
                 userId: Number(payload.userId ?? payload.sub),
                 username: String(payload.username ?? ''),
@@ -306,7 +313,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
                 return;
             }
 
-            socket.data.user = user;
+            (socket.data as { user?: SocketUser }).user = user;
             next();
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -316,7 +323,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     }
 
     private extractHandshakeToken(socket: Socket): string | null {
-        const authToken = socket.handshake.auth?.token;
+        const auth = socket.handshake.auth as { token?: string } | undefined;
+        const authToken = auth?.token;
         const headerToken = socket.handshake.headers.authorization;
         const rawToken =
             typeof authToken === 'string' ? authToken : typeof headerToken === 'string' ? headerToken : null;
@@ -359,7 +367,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     }
 
     private getSocketUser(client: Socket): SocketUser | undefined {
-        return client.data.user as SocketUser | undefined;
+        return (client.data as { user?: SocketUser }).user;
     }
 
     private requireSocketUser(client: Socket): SocketUser {
@@ -399,7 +407,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
         for (const socketId of sockets) {
             const socket = this.server.sockets.sockets.get(socketId);
-            const user = socket?.data.user as SocketUser | undefined;
+            const user = (socket?.data as { user?: SocketUser } | undefined)?.user;
             if (user) {
                 userIds.add(user.userId);
             }
