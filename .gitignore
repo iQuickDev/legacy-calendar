@@ -20,3 +20,7 @@
 # temp directory
 .temp
 .tmp
+
+node_modules
+dist
+uploads
