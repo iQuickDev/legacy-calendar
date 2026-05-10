@@ -49,6 +49,7 @@ export function hasLocalChatAccess(event: Event | null, currentUserId: number | 
 export function useChatAccess(eventRef: Ref<Event | null>) {
     const sessionStore = useSessionStore();
     const canAccessChat = ref(false);
+    const isChatAccessChecking = ref(true);
     const accessCheckKey = ref(0);
 
     watch(
@@ -59,11 +60,15 @@ export function useChatAccess(eventRef: Ref<Event | null>) {
 
             if (!event || currentUserId == null) {
                 canAccessChat.value = false;
+                isChatAccessChecking.value = true;
                 return;
             }
 
+            isChatAccessChecking.value = true;
+
             if (!hasLocalChatAccess(event, currentUserId)) {
                 canAccessChat.value = false;
+                isChatAccessChecking.value = false;
                 return;
             }
 
@@ -71,10 +76,12 @@ export function useChatAccess(eventRef: Ref<Event | null>) {
                 await api.getChatHistory(event.id, undefined, 1);
                 if (accessCheckKey.value === checkId) {
                     canAccessChat.value = true;
+                    isChatAccessChecking.value = false;
                 }
             } catch {
                 if (accessCheckKey.value === checkId) {
                     canAccessChat.value = false;
+                    isChatAccessChecking.value = false;
                 }
             }
         },
@@ -82,7 +89,8 @@ export function useChatAccess(eventRef: Ref<Event | null>) {
     );
 
     return {
-        canAccessChat
+        canAccessChat,
+        isChatAccessChecking
     };
 }
 

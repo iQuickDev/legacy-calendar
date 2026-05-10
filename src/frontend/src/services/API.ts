@@ -1,7 +1,10 @@
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 export const baseURL = import.meta.env.VITE_API_URL;
-export const uploadsBaseURL = import.meta.env.VITE_UPLOADS_API_URL ?? baseURL;
+export const uploadsBaseURL =
+    import.meta.env.DEV && baseURL
+        ? baseURL
+        : import.meta.env.VITE_UPLOADS_API_URL ?? baseURL ?? window.location.origin;
 export const socketBaseURL = baseURL && /^https?:\/\//i.test(baseURL) ? baseURL : window.location.origin;
 export const socketPath =
     baseURL && /^https?:\/\//i.test(baseURL)
