@@ -1,4 +1,12 @@
 import { defineConfig } from 'vite';
+import { Socket } from 'node:net';
+
+// Polyfill socket.destroySoon for Bun compatibility with Vite's proxy
+if (typeof process !== 'undefined' && process.versions && process.versions.bun) {
+    if (!(Socket.prototype as any).destroySoon) {
+        (Socket.prototype as any).destroySoon = Socket.prototype.destroy;
+    }
+}
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 import vueDevTools from 'vite-plugin-vue-devtools';
@@ -13,8 +21,26 @@ export default defineConfig({
                 target: 'http://localhost:3000',
                 changeOrigin: true,
                 ws: true,
-                // Optional: remove /api from the path before it hits the backend
-                rewrite: (path) => path.replace(/^\/api/, '')
+                rewrite: (path) => path.replace(/^\/api/, ''),
+                configure: (proxy, _options) => {
+                    proxy.on('proxyReqWs', (_proxyReq, _req, socket) => {
+                        if (socket && !(socket as any).destroySoon) {
+                            (socket as any).destroySoon = (socket as any).destroy;
+                        }
+                    });
+                    proxy.on('proxyRes', (proxyRes, _req, res) => {
+                        const socket = (res as any).socket || (res as any).connection;
+                        if (socket && !(socket as any).destroySoon) {
+                            (socket as any).destroySoon = (socket as any).destroy;
+                        }
+                    });
+                    proxy.on('error', (err, _req, res) => {
+                        const socket = (res as any).socket || (res as any).connection;
+                        if (socket && !(socket as any).destroySoon) {
+                            (socket as any).destroySoon = (socket as any).destroy;
+                        }
+                    });
+                }
             }
         }
     },

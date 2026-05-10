@@ -55,7 +55,9 @@ watch(
 <template>
     <div class="bg-surface-50 dark:bg-surface-950 h-dvh">
         <div v-if="isChatAccessChecking" class="flex h-full flex-col gap-4 overflow-hidden p-4">
-            <div class="bg-surface-950/95 flex items-center gap-3 rounded-2xl p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
+            <div
+                class="bg-surface-950/95 flex items-center gap-3 rounded-2xl p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
+            >
                 <div class="bg-surface-800 h-10 w-10 animate-pulse rounded-full"></div>
                 <div class="min-w-0 flex-1 space-y-2">
                     <div class="bg-surface-800 h-4 w-32 animate-pulse rounded-full"></div>
