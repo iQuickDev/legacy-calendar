@@ -31,17 +31,13 @@ export default defineConfig({
                             (socket as any).destroySoon = (socket as any).destroy;
                         }
                     });
-                    proxy.on('proxyRes', (proxyRes, req, res) => {
-                        void proxyRes;
-                        void req;
+                    proxy.on('proxyRes', (_proxyRes, _req, res) => {
                         const socket = (res as any).socket || (res as any).connection;
                         if (socket && !(socket as any).destroySoon) {
                             (socket as any).destroySoon = (socket as any).destroy;
                         }
                     });
-                    proxy.on('error', (err, req, res) => {
-                        void err;
-                        void req;
+                    proxy.on('error', (_err, _req, res) => {
                         const socket = (res as any).socket || (res as any).connection;
                         if (socket && !(socket as any).destroySoon) {
                             (socket as any).destroySoon = (socket as any).destroy;
