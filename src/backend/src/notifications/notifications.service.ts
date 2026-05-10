@@ -2,7 +2,6 @@ import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
 import admin from 'firebase-admin';
 import { PrismaService } from '../prisma/prisma.service.js';
 import * as path from 'path';
-import * as fs from 'fs';
 
 @Injectable()
 export class NotificationsService implements OnModuleInit {
@@ -11,14 +10,14 @@ export class NotificationsService implements OnModuleInit {
 
     constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-    onModuleInit() {
-        this.initializeFirebase();
+    async onModuleInit() {
+        await this.initializeFirebase();
     }
 
-    private initializeFirebase() {
+    private async initializeFirebase() {
         const firebaseConfigPath = path.join(process.cwd(), 'firebase.json');
 
-        if (fs.existsSync(firebaseConfigPath)) {
+        if (await Bun.file(firebaseConfigPath).exists()) {
             try {
                 admin.initializeApp({
                     credential: admin.credential.cert(firebaseConfigPath)

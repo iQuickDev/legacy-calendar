@@ -16,8 +16,9 @@ export default [
       globals: {
         ...globals.node,
         ...globals.jest,
+        Bun: 'readonly',
       },
-      sourceType: 'commonjs',
+      sourceType: 'module',
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,

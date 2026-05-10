@@ -163,10 +163,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             }
 
             const reaction = await this.chatService.toggleReaction(messageId, user.userId, emoji, message.eventId);
-            this.server.to(`chat:${reaction.eventId}`).emit(
-                'reactionUpdated',
-                this.chatService.toReactionPayload(reaction.messageId, reaction.reactions)
-            );
+            this.server
+                .to(`chat:${reaction.eventId}`)
+                .emit('reactionUpdated', this.chatService.toReactionPayload(reaction.messageId, reaction.reactions));
         } catch (error) {
             this.emitSocketError(client, error);
         }
@@ -249,7 +248,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
         try {
             const message = await this.chatService.editMessage(messageId, user.userId, text);
-            this.server.to(`chat:${message.eventId}`).emit('messageEdited', this.chatService.toEditedMessagePayload(message));
+            this.server
+                .to(`chat:${message.eventId}`)
+                .emit('messageEdited', this.chatService.toEditedMessagePayload(message));
         } catch (error) {
             this.emitSocketError(client, error);
         }
@@ -317,7 +318,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     private extractHandshakeToken(socket: Socket): string | null {
         const authToken = socket.handshake.auth?.token;
         const headerToken = socket.handshake.headers.authorization;
-        const rawToken = typeof authToken === 'string' ? authToken : typeof headerToken === 'string' ? headerToken : null;
+        const rawToken =
+            typeof authToken === 'string' ? authToken : typeof headerToken === 'string' ? headerToken : null;
 
         if (!rawToken) {
             return null;
@@ -375,7 +377,12 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     }
 
     private isChatMediaType(value: unknown): value is ChatMediaType {
-        return value === ChatMediaType.image || value === ChatMediaType.gif || value === ChatMediaType.video || value === ChatMediaType.audio;
+        return (
+            value === ChatMediaType.image ||
+            value === ChatMediaType.gif ||
+            value === ChatMediaType.video ||
+            value === ChatMediaType.audio
+        );
     }
 
     private isJoinedToEvent(client: Socket, eventId: number): boolean {

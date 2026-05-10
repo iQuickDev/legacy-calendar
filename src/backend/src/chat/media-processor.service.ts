@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import sharp from 'sharp';
 import ffmpeg from 'fluent-ffmpeg';
-import * as path from 'path';
-import * as fs from 'fs';
 
 @Injectable()
 export class MediaProcessorService {

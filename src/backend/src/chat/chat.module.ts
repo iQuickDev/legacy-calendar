@@ -10,18 +10,8 @@ import { AuthModule } from '../auth/auth.module.js';
 import { MediaProcessorService } from './media-processor.service.js';
 
 @Module({
-    imports: [
-        AuthModule,
-        EventsModule,
-        NotificationsModule,
-        PrismaModule
-    ],
-    providers: [
-        ChatGateway,
-        ChatService,
-        ChatRepository,
-        MediaProcessorService
-    ],
+    imports: [AuthModule, EventsModule, NotificationsModule, PrismaModule],
+    providers: [ChatGateway, ChatService, ChatRepository, MediaProcessorService],
     controllers: [ChatController]
 })
 export class ChatModule {}

@@ -13,3 +13,4 @@ README.md
 firebase.json
 eslint.config.mjs
 .prettierrc
+package-lock.json

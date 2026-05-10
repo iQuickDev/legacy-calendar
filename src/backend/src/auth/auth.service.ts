@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { User as UserModel } from '../../prisma/generated/client.js';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { UserDto } from '../users/dto/user.dto.js';
@@ -17,7 +16,7 @@ export class AuthService {
 
     async validateUser(username: string, pass: string): Promise<AuthenticatedUser | null> {
         const user = await this.usersService.findOneByUsername(username);
-        if (user && (await bcrypt.compare(pass, user.password))) {
+        if (user && (await Bun.password.verify(pass, user.password))) {
             const { password: _password, ...result } = user;
             return result;
         }
@@ -38,7 +37,7 @@ export class AuthService {
             throw new NotFoundException('User not found');
         }
 
-        const isPasswordValid = await bcrypt.compare(changePasswordDto.currentPassword, user.password);
+        const isPasswordValid = await Bun.password.verify(changePasswordDto.currentPassword, user.password);
         if (!isPasswordValid) {
             throw new BadRequestException('Current password is incorrect');
         }

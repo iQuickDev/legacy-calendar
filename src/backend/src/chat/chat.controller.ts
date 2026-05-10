@@ -18,9 +18,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { ChatService } from './chat.service.js';
 import { MediaProcessorService } from './media-processor.service.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import * as path from 'path';
-import * as fs from 'fs';
+import { mkdirSync } from 'fs';
 import { ChatMediaType } from '../../prisma/generated/client.js';
 
 type RequestWithUser = {
@@ -76,28 +76,28 @@ export class ChatController {
 
         const uploadInfo = this.resolveMediaUpload(file);
         const uploadDir = path.join(process.cwd(), 'uploads', 'chat', eventId.toString());
-        fs.mkdirSync(uploadDir, { recursive: true });
+        mkdirSync(uploadDir, { recursive: true });
 
-        const fileName = `${uuidv4()}${uploadInfo.ext}`;
+        const fileName = `${randomUUID()}${uploadInfo.ext}`;
         const filePath = path.join(uploadDir, fileName);
         const tempPath = path.join(uploadDir, `temp_${fileName}`);
 
         if (uploadInfo.mediaType === ChatMediaType.image) {
-            fs.writeFileSync(tempPath, file.buffer);
+            await Bun.write(tempPath, file.buffer);
             try {
                 await this.mediaProcessor.processImage(tempPath, filePath);
             } finally {
-                this.removeIfExists(tempPath);
+                await this.removeIfExists(tempPath);
             }
         } else if (uploadInfo.mediaType === ChatMediaType.video) {
-            fs.writeFileSync(tempPath, file.buffer);
+            await Bun.write(tempPath, file.buffer);
             try {
                 await this.mediaProcessor.processVideo(tempPath, filePath);
             } finally {
-                this.removeIfExists(tempPath);
+                await this.removeIfExists(tempPath);
             }
         } else {
-            fs.writeFileSync(filePath, file.buffer);
+            await Bun.write(filePath, file.buffer);
         }
 
         return {
@@ -179,9 +179,10 @@ export class ChatController {
         return undefined;
     }
 
-    private removeIfExists(filePath: string) {
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+    private async removeIfExists(filePath: string) {
+        const f = Bun.file(filePath);
+        if (await f.exists()) {
+            await f.delete();
         }
     }
 }

@@ -3,7 +3,6 @@ import { ChatRepository, ChatMessageWithRelations, ReactionSummary } from './cha
 import { EventsRepository } from '../events/events.repository.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { InviteStatus, ChatMediaType } from '../../prisma/generated/client.js';
-import * as fs from 'fs';
 import * as path from 'path';
 
 export type ChatMessagePayload = {
@@ -186,8 +185,9 @@ export class ChatService {
 
         if (message.mediaUrl) {
             const filePath = path.join(process.cwd(), message.mediaUrl);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
+            const f = Bun.file(filePath);
+            if (await f.exists()) {
+                await f.delete();
             }
         }
 
@@ -228,9 +228,13 @@ export class ChatService {
 
         const participantIds = [
             event.hostId,
-            ...event.participants.filter((participant) => participant.status === InviteStatus.ACCEPTED).map((participant) => participant.userId)
+            ...event.participants
+                .filter((participant) => participant.status === InviteStatus.ACCEPTED)
+                .map((participant) => participant.userId)
         ];
-        const offlineParticipantIds = [...new Set(participantIds)].filter((participantId) => !connectedUserIds.has(participantId));
+        const offlineParticipantIds = [...new Set(participantIds)].filter(
+            (participantId) => !connectedUserIds.has(participantId)
+        );
 
         if (offlineParticipantIds.length === 0) {
             return;

@@ -20,7 +20,9 @@ export class ImpersonateInterceptor implements NestInterceptor {
                     try {
                         const user = await this.usersService.findOne(userId);
                         if (user) {
-                            this.logger.log(`Admin ${request.user.username} is impersonating user ${user.username} (ID: ${user.id})`);
+                            this.logger.log(
+                                `Admin ${request.user.username} is impersonating user ${user.username} (ID: ${user.id})`
+                            );
                             // Switch current user to the impersonated one
                             request.user = {
                                 userId: user.id,

@@ -1,60 +1,35 @@
-# --- STAGE 1: Build the application ---
-FROM node:22-alpine AS builder
+# use the official Bun image
+FROM oven/bun:1 AS base
+WORKDIR /usr/src/app
 
-WORKDIR /app
+# install dependencies into temp directory
+# this will cache them and speed up future builds
+FROM base AS install
+RUN mkdir -p /temp/prod
+COPY package.json bun.lock /temp/prod/
+COPY prisma /temp/prod/prisma/
+RUN cd /temp/prod && bun install --frozen-lockfile --production
 
-# Copy dependency manifests
-COPY package*.json ./
+# copy production dependencies and source code into final image
+FROM base AS release
+COPY --from=install /temp/prod/node_modules node_modules
+
+# Copy source code and config
+COPY package.json ./
 COPY prisma ./prisma/
+COPY src ./src/
 
-# Install all dependencies (including devDependencies for building)
-RUN npm ci
+# Generate Prisma Client (Bun runtime)
+RUN bunx --bun prisma generate
 
-# Copy source code
-COPY . .
-
-# Generate Prisma Client and Build the production application
-RUN npx prisma generate
-RUN npm run build
-
-# --- STAGE 2: Install production dependencies ---
-FROM node:22-alpine AS prod-deps
-
-WORKDIR /app
-
-# Copy dependency manifests
-COPY package*.json ./
-COPY prisma ./prisma/
-
-# Install ONLY production dependencies
-# Need build-base tools for native modules like bcrypt
-RUN apk add --no-cache python3 make g++ && \
-    npm ci --omit=dev && \
-    apk del python3 make g++
-
-# --- STAGE 3: Final Runner Image ---
-FROM node:22-alpine AS runner
-
-WORKDIR /app
-
-# Set environment variables
 ENV NODE_ENV=production
-ENV NODE_OPTIONS=--openssl-legacy-provider
 
-# Copy build artifacts and production dependencies
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma ./prisma
-
-# Create uploads directory and set permissions for the node user
-RUN mkdir -p /app/uploads/profile-pictures && chown -R node:node /app/uploads
+# Create uploads directory and set permissions
+RUN mkdir -p /usr/src/app/uploads/profile-pictures && chown -R bun:bun /usr/src/app/uploads
 
 # Use non-root user for security
-USER node
+USER bun
 
-# Expose the application port
 EXPOSE 3000
 
-# Start the application
-CMD ["node", "dist/src/main.js"]
+CMD ["bun", "src/main.ts"]

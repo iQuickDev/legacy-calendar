@@ -1,16 +1,13 @@
 import 'multer';
 import { ConflictException, Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 import { Prisma, User as UserModel } from '../../prisma/generated/client.js';
 import sharp from 'sharp';
-import * as fs from 'fs/promises';
+import { mkdir } from 'fs/promises';
 import * as path from 'path';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UserDto } from './dto/user.dto.js';
 import { UsersRepository } from './users.repository.js';
-
-const BCRYPT_COST_FACTOR = 12;
 
 @Injectable()
 export class UsersService {
@@ -20,7 +17,7 @@ export class UsersService {
 
     async create(createUserDto: CreateUserDto): Promise<UserDto> {
         try {
-            const hashedPassword = await bcrypt.hash(createUserDto.password, BCRYPT_COST_FACTOR);
+            const hashedPassword = await Bun.password.hash(createUserDto.password);
             return await this.usersRepo.create({
                 username: createUserDto.username,
                 password: hashedPassword
@@ -57,7 +54,7 @@ export class UsersService {
             const updateData: Prisma.UserUpdateInput = { ...updateUserDto };
 
             if (updateUserDto.password !== undefined) {
-                updateData.password = await bcrypt.hash(updateUserDto.password, BCRYPT_COST_FACTOR);
+                updateData.password = await Bun.password.hash(updateUserDto.password);
             }
 
             return await this.usersRepo.update(id, updateData);
@@ -80,7 +77,7 @@ export class UsersService {
         await this.findOne(id);
 
         const uploadDir = path.join(process.cwd(), 'uploads', 'profile-pictures');
-        await fs.mkdir(uploadDir, { recursive: true });
+        await mkdir(uploadDir, { recursive: true });
 
         const filename = `${id}.webp`;
         const filePath = path.join(uploadDir, filename);
@@ -108,11 +105,12 @@ export class UsersService {
         const filePath = path.join(process.cwd(), 'uploads', relativePath);
 
         try {
-            await fs.unlink(filePath);
-        } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-                this.logger.warn(`Failed to delete profile picture file ${filePath}`);
+            const f = Bun.file(filePath);
+            if (await f.exists()) {
+                await f.delete();
             }
+        } catch {
+            this.logger.warn(`Failed to delete profile picture file ${filePath}`);
         }
     }
 
