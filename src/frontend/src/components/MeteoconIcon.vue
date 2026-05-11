@@ -1,8 +1,4 @@
-<script setup lang="ts">
-import lottie from 'lottie-web/build/player/lottie_light';
-import type { AnimationItem } from 'lottie-web';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
-
+<script lang="ts">
 // Module-level cache: one fetch per slug, shared across all instances.
 const jsonCache = new Map<string, Promise<Record<string, unknown>>>();
 
@@ -20,6 +16,12 @@ function fetchLottieJson(slug: string): Promise<Record<string, unknown>> {
     jsonCache.set(slug, promise);
     return promise;
 }
+</script>
+
+<script setup lang="ts">
+import lottie from 'lottie-web/build/player/lottie_light';
+import type { AnimationItem } from 'lottie-web';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps<{
     slug: string;
