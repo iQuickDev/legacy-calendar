@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { Socket } from 'node:net';
 
 // Polyfill socket.destroySoon for Bun compatibility with Vite's proxy
@@ -11,6 +12,25 @@ import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 import vueDevTools from 'vite-plugin-vue-devtools';
 import { VitePWA } from 'vite-plugin-pwa';
+
+/**
+ * Copies @meteocons/lottie/fill JSON files to public/meteocons/ so they can be
+ * fetched at runtime by lottie-web via URL. This keeps them out of the Vite
+ * bundle and out of the service worker precache manifest.
+ */
+function copyMeteocons(): Plugin {
+    return {
+        name: 'copy-meteocons',
+        buildStart() {
+            const src = 'node_modules/@meteocons/lottie/fill';
+            const dest = 'public/meteocons';
+            if (!existsSync(dest)) {
+                mkdirSync(dest, { recursive: true });
+                cpSync(src, dest, { recursive: true });
+            }
+        }
+    };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -48,6 +68,7 @@ export default defineConfig({
         sourcemap: true
     },
     plugins: [
+        copyMeteocons(),
         tailwindcss(),
         vue(),
         vueDevTools(),

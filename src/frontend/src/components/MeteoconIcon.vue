@@ -8,15 +8,10 @@ const props = defineProps<{
     size?: number;
 }>();
 
-// Lazy glob – each JSON is a () => Promise, loaded on demand.
-const lottieImporters = import.meta.glob<{ default: Record<string, unknown> }>(
-    '../../node_modules/@meteocons/lottie/fill/*.json'
-);
-
 const container = ref<HTMLElement>();
 let animation: AnimationItem | null = null;
 
-const loadAnimation = async () => {
+const loadAnimation = () => {
     if (!container.value) return;
 
     // Destroy previous animation if slug changed
@@ -24,20 +19,15 @@ const loadAnimation = async () => {
     animation = null;
 
     const slug = props.slug || 'not-available';
-    const path = `../../node_modules/@meteocons/lottie/fill/${slug}.json`;
-    const loader =
-        lottieImporters[path] ?? lottieImporters['../../node_modules/@meteocons/lottie/fill/not-available.json'];
 
-    if (!loader) return;
-
-    const mod = await loader();
-
+    // Load the Lottie JSON at runtime via URL (served from public/meteocons/).
+    // No Vite bundling involved – only the icons actually rendered are fetched.
     animation = lottie.loadAnimation({
         container: container.value,
         renderer: 'svg',
         loop: true,
         autoplay: true,
-        animationData: mod.default
+        path: `/meteocons/${slug}.json`
     });
 };
 
