@@ -1,43 +1,53 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue';
+import lottie from 'lottie-web/build/player/lottie_light';
+import type { AnimationItem } from 'lottie-web';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps<{
     slug: string;
-    style?: 'fill' | 'flat' | 'line' | 'monochrome';
     size?: number;
 }>();
 
-// Lazy glob – each SVG is a () => Promise, loaded on demand instead of eagerly.
-// This prevents bundling every meteocon SVG into a single massive chunk.
-const iconImporters = import.meta.glob('../../node_modules/@meteocons/svg/**/*.svg', {
-    query: '?url',
-    import: 'default'
-});
+// Lazy glob – each JSON is a () => Promise, loaded on demand.
+const lottieImporters = import.meta.glob<{ default: Record<string, unknown> }>(
+    '../../node_modules/@meteocons/lottie/fill/*.json'
+);
 
-const src = ref('');
+const container = ref<HTMLElement>();
+let animation: AnimationItem | null = null;
 
-watchEffect(async () => {
-    const style = props.style ?? 'fill';
+const loadAnimation = async () => {
+    if (!container.value) return;
+
+    // Destroy previous animation if slug changed
+    animation?.destroy();
+    animation = null;
+
     const slug = props.slug || 'not-available';
-    const path = `../../node_modules/@meteocons/svg/${style}/${slug}.svg`;
+    const path = `../../node_modules/@meteocons/lottie/fill/${slug}.json`;
+    const loader =
+        lottieImporters[path] ?? lottieImporters['../../node_modules/@meteocons/lottie/fill/not-available.json'];
 
-    const loader = iconImporters[path] ?? iconImporters[`../../node_modules/@meteocons/svg/${style}/not-available.svg`];
+    if (!loader) return;
 
-    if (loader) {
-        src.value = (await loader()) as string;
-    } else {
-        src.value = '';
-    }
-});
+    const mod = await loader();
+
+    animation = lottie.loadAnimation({
+        container: container.value,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        animationData: mod.default
+    });
+};
+
+onMounted(loadAnimation);
+
+watch(() => props.slug, loadAnimation);
+
+onUnmounted(() => animation?.destroy());
 </script>
 
 <template>
-    <img v-if="src" :src="src" :alt="slug" :width="size ?? 64" :height="size ?? 64" class="meteocon-icon" />
+    <div ref="container" :style="{ width: `${size ?? 64}px`, height: `${size ?? 64}px` }" />
 </template>
-
-<style scoped>
-.meteocon-icon {
-    display: inline-block;
-    vertical-align: middle;
-}
-</style>

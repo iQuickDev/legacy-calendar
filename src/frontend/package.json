@@ -13,13 +13,14 @@
     "format:check": "prettier --check \"src/**/*.{vue,ts,js,css,json}\""
   },
   "dependencies": {
-    "@meteocons/svg": "^0.1.0",
+    "@meteocons/lottie": "^0.1.0",
     "@primeuix/themes": "^2.0.3",
     "@tailwindcss/vite": "^4.2.4",
     "axios": "^1.15.2",
     "date-fns": "^4.1.0",
     "firebase": "^12.12.1",
     "idb-keyval": "^6.2.2",
+    "lottie-web": "^5.13.0",
     "maplibre-gl": "^5.24.0",
     "openmeteo": "^1.2.3",
     "pinia": "^3.0.4",
