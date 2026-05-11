@@ -3,6 +3,24 @@ import lottie from 'lottie-web/build/player/lottie_light';
 import type { AnimationItem } from 'lottie-web';
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 
+// Module-level cache: one fetch per slug, shared across all instances.
+const jsonCache = new Map<string, Promise<Record<string, unknown>>>();
+
+function fetchLottieJson(slug: string): Promise<Record<string, unknown>> {
+    const cached = jsonCache.get(slug);
+    if (cached) return cached;
+
+    const promise = fetch(`/meteocons/${slug}.json`)
+        .then((r) => r.json())
+        .catch(() => {
+            jsonCache.delete(slug); // allow retry on failure
+            return null;
+        });
+
+    jsonCache.set(slug, promise);
+    return promise;
+}
+
 const props = defineProps<{
     slug: string;
     size?: number;
@@ -11,23 +29,23 @@ const props = defineProps<{
 const container = ref<HTMLElement>();
 let animation: AnimationItem | null = null;
 
-const loadAnimation = () => {
+const loadAnimation = async () => {
     if (!container.value) return;
 
-    // Destroy previous animation if slug changed
     animation?.destroy();
     animation = null;
 
     const slug = props.slug || 'not-available';
+    const data = await fetchLottieJson(slug);
+    if (!data || !container.value) return;
 
-    // Load the Lottie JSON at runtime via URL (served from public/meteocons/).
-    // No Vite bundling involved – only the icons actually rendered are fetched.
     animation = lottie.loadAnimation({
         container: container.value,
         renderer: 'svg',
         loop: true,
         autoplay: true,
-        path: `/meteocons/${slug}.json`
+        // Deep clone so each lottie instance gets its own mutable copy
+        animationData: JSON.parse(JSON.stringify(data))
     });
 };
 
