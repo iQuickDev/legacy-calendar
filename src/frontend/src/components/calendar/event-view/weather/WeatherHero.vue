@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { injectWeatherDialogState } from './useWeatherDialogState';
+import MeteoconIcon from '../../../MeteoconIcon.vue';
 
 const { displayInfo, displayTemp } = injectWeatherDialogState();
 </script>
@@ -7,9 +8,7 @@ const { displayInfo, displayTemp } = injectWeatherDialogState();
 <template>
     <div class="flex flex-col items-center gap-2">
         <div class="flex h-24 w-24 items-center justify-center rounded-3xl bg-zinc-900">
-            <span class="weather-emoji-hero text-6xl">
-                {{ displayInfo.emoji }}
-            </span>
+            <MeteoconIcon :slug="displayInfo.meteoconSlug" :size="72" />
         </div>
         <div class="mt-4 flex items-start">
             <span class="ml-2 text-7xl font-bold tracking-tighter">{{ displayTemp }}</span>
@@ -20,10 +19,3 @@ const { displayInfo, displayTemp } = injectWeatherDialogState();
         </span>
     </div>
 </template>
-
-<style scoped>
-.weather-emoji-hero {
-    font-family: var(--font-emoji);
-    line-height: 1;
-}
-</style>

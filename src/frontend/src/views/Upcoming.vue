@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, defineAsyncComponent } from 'vue';
 import { storeToRefs } from 'pinia';
 import ProgressSpinner from 'primevue/progressspinner';
 import UpcomingEventCard from '../components/UpcomingEventCard.vue';
 import UpcomingHeroCard from '../components/UpcomingHeroCard.vue';
-import EventViewDialog from '../components/calendar/EventViewDialog.vue';
-import EventEditDialog from '../components/calendar/EventEditDialog.vue';
 import type { Event } from '../types/Event';
 import Button from 'primevue/button';
 
 import { useEventsStore } from '../stores/events';
 import { useSharedEvent } from '../composables/useSharedEvent';
 import { useEventWeather } from '../composables/useEventWeather';
+
+const EventViewDialog = defineAsyncComponent(() => import('../components/calendar/EventViewDialog.vue'));
+const EventEditDialog = defineAsyncComponent(() => import('../components/calendar/EventEditDialog.vue'));
 
 const eventsStore = useEventsStore();
 

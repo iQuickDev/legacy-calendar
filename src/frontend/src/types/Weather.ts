@@ -2,6 +2,7 @@ export interface HourlyDataPoint {
     time: string;
     temperature: number;
     weatherCode: number;
+    isDay: boolean;
     apparentTemperature: number;
     windSpeed: number;
     humidity: number;
@@ -17,6 +18,7 @@ export interface EventWeather {
     timestamp: string;
     temperature: number | null;
     weatherCode: number | null;
+    isDay: boolean;
     summary: string;
     apparentTemperature?: number | null;
     windSpeed?: number | null;

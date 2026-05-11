@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue';
 import Drawer from 'primevue/drawer';
 import { injectEventView } from '../../../composables/useEventView';
 import type { Event } from '../../../types/Event';
-import EventChatPanel from '../../chat/EventChatPanel.vue';
+
+const EventChatPanel = defineAsyncComponent(() => import('../../chat/EventChatPanel.vue'));
 
 defineProps<{
     visible: boolean;

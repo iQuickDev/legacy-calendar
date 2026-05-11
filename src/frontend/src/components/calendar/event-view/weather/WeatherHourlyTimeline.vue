@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { injectWeatherDialogState } from './useWeatherDialogState';
 import { mapWeatherCodeToSummary } from '../../../../composables/useEventWeather';
+import MeteoconIcon from '../../../MeteoconIcon.vue';
 
 const {
     hourlyForSelectedDay,
@@ -41,7 +42,7 @@ const {
                 ]"
             >
                 <span class="text-[10px] font-bold text-zinc-500">{{ formatHour(hour.time) }}</span>
-                <span class="weather-emoji-sm">{{ mapWeatherCodeToSummary(hour.weatherCode).emoji }}</span>
+                <MeteoconIcon :slug="mapWeatherCodeToSummary(hour.weatherCode, hour.isDay).meteoconSlug" :size="42" />
                 <span class="text-sm font-bold">{{ Math.round(hour.temperature) }}°</span>
             </button>
         </div>
@@ -49,12 +50,6 @@ const {
 </template>
 
 <style scoped>
-.weather-emoji-sm {
-    font-family: var(--font-emoji);
-    font-size: 1.25rem;
-    line-height: 1;
-}
-
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }

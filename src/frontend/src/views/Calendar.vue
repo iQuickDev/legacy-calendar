@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue';
 import { useSharedEvent } from '../composables/useSharedEvent';
 import { format } from 'date-fns';
 import { useCalendar } from '../composables/useCalendar';
@@ -8,12 +8,13 @@ import { useToast } from 'primevue/usetoast';
 import CalendarCell from '../components/calendar/CalendarCell.vue';
 import Button from 'primevue/button';
 import ProgressSpinner from 'primevue/progressspinner';
-import EventDialog from '../components/calendar/EventDialog.vue';
-import EventViewDialog from '../components/calendar/EventViewDialog.vue';
-import EventEditDialog from '../components/calendar/EventEditDialog.vue';
-import DayViewDialog from '../components/calendar/DayViewDialog.vue';
 import type { CalendarDay } from '../types/Calendar';
 import type { CreateEventDto } from '../types/Event';
+
+const EventDialog = defineAsyncComponent(() => import('../components/calendar/EventDialog.vue'));
+const EventViewDialog = defineAsyncComponent(() => import('../components/calendar/EventViewDialog.vue'));
+const EventEditDialog = defineAsyncComponent(() => import('../components/calendar/EventEditDialog.vue'));
+const DayViewDialog = defineAsyncComponent(() => import('../components/calendar/DayViewDialog.vue'));
 
 const toast = useToast();
 const eventsStore = useEventsStore();

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue';
+import { computed, ref, watch, onMounted, defineAsyncComponent } from 'vue';
 import type { Event } from '../../../types/Event';
 import { format, formatDistanceToNowStrict, parseISO } from 'date-fns';
 import TimeRemainingTag from '../../TimeRemainingTag.vue';
@@ -9,11 +9,12 @@ import api from '../../../services/API';
 import type { ChatMessage } from '../../../types/Chat';
 
 import UpcomingEventWeatherBadge from '../../UpcomingEventWeatherBadge.vue';
-import WeatherDialog from './weather/WeatherDialog.vue';
 import { useEventWeather } from '../../../composables/useEventWeather';
 import { useGeocode } from '../../../composables/useGeocode';
-import EventMapPreview from './EventMapPreview.vue';
-import MapDialog from './MapDialog.vue';
+
+const WeatherDialog = defineAsyncComponent(() => import('./weather/WeatherDialog.vue'));
+const EventMapPreview = defineAsyncComponent(() => import('./EventMapPreview.vue'));
+const MapDialog = defineAsyncComponent(() => import('./MapDialog.vue'));
 
 const props = defineProps<{
     event: Event;

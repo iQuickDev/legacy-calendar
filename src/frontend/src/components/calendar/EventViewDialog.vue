@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, toRef, provide } from 'vue';
+import { ref, watch, toRef, provide, defineAsyncComponent } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
@@ -7,10 +7,11 @@ import { useConfirm } from 'primevue/useconfirm';
 
 import type { Event, EventFeature } from '../../types/Event';
 import { useEventsStore } from '../../stores/events';
-import FeatureSelectionDialog from './FeatureSelectionDialog.vue';
 import EventViewMode from './event-view/EventViewMode.vue';
-import EventChatDrawer from './event-view/EventChatDrawer.vue';
 import { useEventView, EventViewInjectionKey } from '../../composables/useEventView';
+
+const FeatureSelectionDialog = defineAsyncComponent(() => import('./FeatureSelectionDialog.vue'));
+const EventChatDrawer = defineAsyncComponent(() => import('./event-view/EventChatDrawer.vue'));
 import type { ParticipateDto } from '../../types/Event';
 import { useRouter } from 'vue-router';
 

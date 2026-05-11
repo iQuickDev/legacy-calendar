@@ -37,18 +37,70 @@ const getWeekRange = (targetDate: Date) => {
     };
 };
 
-export const mapWeatherCodeToSummary = (code: number | null): { summary: string; icon: string; emoji: string } => {
-    if (code === null) return { summary: 'Unknown', icon: 'pi pi-question', emoji: '❓' };
-    if (code === 0) return { summary: 'Clear', icon: 'pi pi-sun', emoji: '☀️' };
-    if (code <= 3) return { summary: 'Partly Cloudy', icon: 'pi pi-cloud', emoji: '🌤️' };
-    if (code === 45 || code === 48) return { summary: 'Fog', icon: 'pi pi-cloud', emoji: '🌫️' };
-    if (code <= 55) return { summary: 'Drizzle', icon: 'pi pi-cloud-download', emoji: '🌦️' };
-    if (code <= 65) return { summary: 'Rain', icon: 'pi pi-cloud-download', emoji: '🌧️' };
-    if (code <= 75) return { summary: 'Snow', icon: 'pi pi-cloud-download', emoji: '❄️' };
-    if (code <= 82) return { summary: 'Showers', icon: 'pi pi-cloud-download', emoji: '🌦️' };
-    if (code <= 86) return { summary: 'Snow Showers', icon: 'pi pi-cloud-download', emoji: '🌨️' };
-    if (code >= 95) return { summary: 'Thunderstorm', icon: 'pi pi-bolt', emoji: '⛈️' };
-    return { summary: 'Unknown', icon: 'pi pi-question', emoji: '❓' };
+export const mapWeatherCodeToSummary = (
+    code: number | null,
+    isDay = true
+): { summary: string; meteoconSlug: string } => {
+    if (code === null) return { summary: 'Unknown', meteoconSlug: 'not-available' };
+
+    // WMO Weather interpretation codes (WW)
+    // https://open-meteo.com/en/docs
+    if (code === 0) {
+        return {
+            summary: 'Clear',
+            meteoconSlug: isDay ? 'clear-day' : 'clear-night'
+        };
+    }
+    if (code <= 3) {
+        return {
+            summary: 'Partly Cloudy',
+            meteoconSlug: isDay ? 'partly-cloudy-day' : 'partly-cloudy-night'
+        };
+    }
+    if (code === 45 || code === 48) {
+        return {
+            summary: 'Fog',
+            meteoconSlug: isDay ? 'fog-day' : 'fog-night'
+        };
+    }
+    if (code <= 55) {
+        return {
+            summary: 'Drizzle',
+            meteoconSlug: 'drizzle'
+        };
+    }
+    if (code <= 65) {
+        return {
+            summary: 'Rain',
+            meteoconSlug: 'rain'
+        };
+    }
+    if (code <= 75) {
+        return {
+            summary: 'Snow',
+            meteoconSlug: 'snow'
+        };
+    }
+    if (code <= 82) {
+        return {
+            summary: 'Showers',
+            meteoconSlug: 'extreme-rain'
+        };
+    }
+    if (code <= 86) {
+        return {
+            summary: 'Snow Showers',
+            meteoconSlug: 'extreme-snow'
+        };
+    }
+    if (code >= 95) {
+        return {
+            summary: 'Thunderstorm',
+            meteoconSlug: isDay ? 'thunderstorms-day-rain' : 'thunderstorms-night-rain'
+        };
+    }
+
+    return { summary: 'Unknown', meteoconSlug: 'not-available' };
 };
 
 const weatherByEventId = ref<Record<number, EventWeather>>({});
@@ -95,6 +147,7 @@ export function useEventWeather(events?: Ref<Event[]>) {
                 const hourlyVariables = [
                     'temperature_2m',
                     'weather_code',
+                    'is_day',
                     'apparent_temperature',
                     'wind_speed_10m',
                     'relative_humidity_2m',
@@ -109,7 +162,10 @@ export function useEventWeather(events?: Ref<Event[]>) {
                 if (weekStart < ninetyTwoDaysAgo) {
                     url = 'https://archive-api.open-meteo.com/v1/archive';
                     isArchive = true;
-                    // Archive doesn't have precipitation_probability, use precipitation (sum) instead
+                    // Archive doesn't have is_day or precipitation_probability
+                    const isDayIndex = hourlyVariables.indexOf('is_day');
+                    if (isDayIndex > -1) hourlyVariables.splice(isDayIndex, 1);
+
                     const probIndex = hourlyVariables.indexOf('precipitation_probability');
                     if (probIndex > -1) hourlyVariables[probIndex] = 'precipitation';
                 }
@@ -131,21 +187,28 @@ export function useEventWeather(events?: Ref<Event[]>) {
                 const range = (start: number, stop: number, step: number) =>
                     Array.from({ length: (stop - start) / step }, (_, i) => start + i * step);
 
+                const getVar = (name: string) => {
+                    const idx = hourlyVariables.indexOf(name);
+                    if (idx === -1) return null;
+                    const v = hourly.variables(idx);
+                    return v ? Array.from(v.valuesArray()!) : null;
+                };
+
                 const data = {
                     timezone: response.timezone(),
                     hourly: {
                         time: range(Number(hourly.time()), Number(hourly.timeEnd()), hourly.interval()).map((t) =>
                             new Date((t + utcOffsetSeconds) * 1000).toISOString()
                         ),
-                        temperature_2m: Array.from(hourly.variables(0)!.valuesArray()!),
-                        weather_code: Array.from(hourly.variables(1)!.valuesArray()!),
-                        apparent_temperature: Array.from(hourly.variables(2)!.valuesArray()!),
-                        wind_speed_10m: Array.from(hourly.variables(3)!.valuesArray()!),
-                        relative_humidity_2m: Array.from(hourly.variables(4)!.valuesArray()!),
-                        // Map archive precipitation to probability (0 or 100 for simplicity or just 0)
+                        temperature_2m: getVar('temperature_2m')!,
+                        weather_code: getVar('weather_code')!,
+                        is_day: getVar('is_day'),
+                        apparent_temperature: getVar('apparent_temperature'),
+                        wind_speed_10m: getVar('wind_speed_10m'),
+                        relative_humidity_2m: getVar('relative_humidity_2m'),
                         precipitation_probability: isArchive
-                            ? Array.from(hourly.variables(5)!.valuesArray()!).map((v) => (v > 0 ? 100 : 0))
-                            : Array.from(hourly.variables(5)!.valuesArray()!)
+                            ? (getVar('precipitation') || []).map((v) => (v > 0 ? 100 : 0))
+                            : getVar('precipitation_probability')
                     }
                 };
 
@@ -197,14 +260,13 @@ export function useEventWeather(events?: Ref<Event[]>) {
             }
         }
 
-        const { summary, icon } = mapWeatherCodeToSummary(forecast.hourly.weather_code[closestIndex]);
-
         const hourlyWindow = [];
         for (let i = 0; i < forecast.hourly.time.length; i++) {
             hourlyWindow.push({
                 time: forecast.hourly.time[i],
                 temperature: forecast.hourly.temperature_2m[i],
                 weatherCode: forecast.hourly.weather_code[i],
+                isDay: forecast.hourly.is_day?.[i] === 0 ? false : true, // Default to true if missing
                 apparentTemperature: forecast.hourly.apparent_temperature?.[i] ?? forecast.hourly.temperature_2m[i],
                 windSpeed: forecast.hourly.wind_speed_10m?.[i] ?? 0,
                 humidity: forecast.hourly.relative_humidity_2m?.[i] ?? 0,
@@ -221,8 +283,13 @@ export function useEventWeather(events?: Ref<Event[]>) {
             timestamp: forecast.hourly.time[closestIndex],
             temperature: forecast.hourly.temperature_2m[closestIndex],
             weatherCode: forecast.hourly.weather_code[closestIndex],
-            summary: `${summary} ${icon === 'pi pi-sun' ? '☀️' : icon === 'pi pi-cloud' ? '☁️' : ''}`.trim(),
-            apparentTemperature: forecast.hourly.apparent_temperature?.[closestIndex] ?? null,
+            isDay: forecast.hourly.is_day?.[closestIndex] === 0 ? false : true,
+            summary: mapWeatherCodeToSummary(
+                forecast.hourly.weather_code[closestIndex],
+                forecast.hourly.is_day?.[closestIndex] === 0 ? false : true
+            ).summary,
+            apparentTemperature:
+                forecast.hourly.apparent_temperature?.[closestIndex] ?? forecast.hourly.temperature_2m[closestIndex],
             windSpeed: forecast.hourly.wind_speed_10m?.[closestIndex] ?? null,
             humidity: forecast.hourly.relative_humidity_2m?.[closestIndex] ?? null,
             precipitationProbability: forecast.hourly.precipitation_probability?.[closestIndex] ?? null,

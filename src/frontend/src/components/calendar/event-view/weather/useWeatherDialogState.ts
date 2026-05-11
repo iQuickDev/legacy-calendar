@@ -14,7 +14,7 @@ export interface WeatherDialogState {
     selectedHour: Ref<HourlyDataPoint | null>;
     displayTemp: Ref<number>;
     displayCode: Ref<number | null>;
-    displayInfo: Ref<{ summary: string; icon: string; emoji: string }>;
+    displayInfo: Ref<{ summary: string; meteoconSlug: string }>;
     displayFeelsLike: Ref<number>;
     displayWind: Ref<number>;
     displayHumidity: Ref<number>;
@@ -111,7 +111,10 @@ export function useWeatherDialogState(props: { visible: boolean; event: Event; w
         return props.weather?.weatherCode ?? null;
     });
 
-    const displayInfo = computed(() => mapWeatherCodeToSummary(displayCode.value));
+    const displayInfo = computed(() => {
+        const isDay = selectedHour.value?.isDay ?? props.weather?.isDay ?? true;
+        return mapWeatherCodeToSummary(displayCode.value, isDay);
+    });
 
     const displayFeelsLike = computed(() => {
         if (selectedHour.value) return Math.round(selectedHour.value.apparentTemperature);
