@@ -10,12 +10,15 @@ import { NotificationsModule } from './notifications/notifications.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
 import { ChatModule } from './chat/chat.module.js';
+import { LoggerModule } from 'nestjs-pino';
+import { createLoggerModuleParams } from './logging/pino.js';
 
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ImpersonateInterceptor } from './auth/interceptors/impersonate.interceptor.js';
 
 @Module({
     imports: [
+        LoggerModule.forRoot(createLoggerModuleParams()),
         ConfigModule.forRoot({ isGlobal: true }),
         PrismaModule,
         AuthModule,

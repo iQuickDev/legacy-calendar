@@ -172,6 +172,7 @@ Create a `.env` file in `src/backend` using the example below:
 DATABASE_URL=postgresql://user:password@host/database
 JWT_SECRET=your-secret-key-here
 JWT_EXPIRES_IN=30d
+LOG_LEVEL=trace
 ```
 
 Then run Prisma and start the API:
@@ -200,6 +201,7 @@ Create a `.env` file in `src/frontend` with the client and Firebase settings exp
 ```bash
 VITE_API_URL=http://localhost:3000
 VITE_UPLOADS_API_URL=http://localhost:3000
+VITE_LOG_LEVEL=trace
 VITE_FIREBASE_API_KEY=your-value
 VITE_FIREBASE_AUTH_DOMAIN=your-value
 VITE_FIREBASE_PROJECT_ID=your-value

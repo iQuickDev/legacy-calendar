@@ -1,14 +1,17 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
+import { AppLogger } from './logging/app-logger.js';
+import { Logger as PinoNestLogger } from 'nestjs-pino';
 
 async function bootstrap() {
-    const logger = new Logger('Bootstrap');
+    const logger = new AppLogger('Bootstrap');
 
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, { bufferLogs: true });
+    app.useLogger(app.get(PinoNestLogger));
 
     app.enableCors({
         origin: true,
@@ -33,11 +36,15 @@ async function bootstrap() {
 
     const port = process.env.PORT ?? 3000;
     await app.listen(port);
+    app.flushLogs();
 
-    logger.log(`Application is running on: http://localhost:${port}`);
+    logger.info('Application is running', {
+        url: `http://localhost:${port}`,
+        swaggerUrl: `http://localhost:${port}/api`
+    });
 }
 
 bootstrap().catch((err) => {
-    const logger = new Logger('Bootstrap');
-    logger.error('Error starting application', err instanceof Error ? err.stack : err);
+    const logger = new AppLogger('Bootstrap');
+    logger.fatal('Error starting application', err instanceof Error ? err : String(err));
 });

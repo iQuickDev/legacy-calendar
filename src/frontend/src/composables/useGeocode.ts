@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { get, set } from 'idb-keyval';
 import type { Event } from '../types/Event';
+import { createLogger } from '../services/logger';
 
 // Persistent Cache Keys (Prefixes)
 const GEO_PREFIX = 'weather_geo_';
@@ -8,6 +9,7 @@ const GEO_CACHE_TTL = 24 * 60 * 60 * 1000; // 1 day
 
 // In-memory tracking for in-flight requests
 const pendingGeocodes = new Map<string, Promise<{ lat: number; lon: number; timezone: string } | null>>();
+const logger = createLogger('Geocode');
 
 // Throttle for Nominatim (max 1 req/sec)
 let nextAvailableGeocodeTime = 0;
@@ -77,14 +79,18 @@ export const geocodeLocation = async (
             // Check if it has a timestamp (new format)
             if (cached.timestamp && cached.data !== undefined) {
                 const isExpired = Date.now() - cached.timestamp > GEO_CACHE_TTL;
-                if (!isExpired) return cached.data;
+                if (!isExpired) {
+                    logger.trace('Geocode cache hit', { location, cacheKey });
+                    return cached.data;
+                }
             } else {
                 // Old format (just the result) - migration: treat as valid but wrap it next time
+                logger.trace('Geocode legacy cache hit', { location, cacheKey });
                 return cached;
             }
         }
     } catch (e) {
-        console.warn('IndexedDB read error:', e);
+        logger.warn('IndexedDB read error while reading geocode cache', e);
     }
 
     // 2. Check in-flight requests
@@ -97,20 +103,23 @@ export const geocodeLocation = async (
         try {
             let result;
             try {
+                logger.debug('Geocoding location', { location });
                 result = await performGeocode(location);
 
                 // Retry with simplified name if it contains a separator
                 if (!result && (location.includes(' - ') || location.includes(' @ '))) {
                     const separator = location.includes(' - ') ? ' - ' : ' @ ';
                     const simplified = location.split(separator)[0];
+                    logger.debug('Retrying geocode with simplified location', { location, simplified });
                     result = await performGeocode(simplified);
                 }
 
                 // Always cache with timestamp (even if it's null/not found)
                 await set(cacheKey, { data: result, timestamp: Date.now() });
+                logger.info('Geocode resolved', { location, cacheKey, found: Boolean(result) });
                 return result;
             } catch (e) {
-                console.error('Geocoding transient error:', e);
+                logger.error('Geocoding transient error', e);
                 return null; // Don't cache on network/server errors
             }
         } finally {
@@ -128,12 +137,14 @@ export function useGeocode() {
 
         // Check module-level cache first
         if (coordsByEventId.value[event.id]) {
+            logger.trace('Using cached coordinates for event', { eventId: event.id });
             return coordsByEventId.value[event.id];
         }
 
         const geo = await geocodeLocation(event.location);
         if (geo) {
             coordsByEventId.value[event.id] = { lat: geo.lat, lon: geo.lon };
+            logger.debug('Cached event coordinates', { eventId: event.id, lat: geo.lat, lon: geo.lon });
         }
         return geo;
     };

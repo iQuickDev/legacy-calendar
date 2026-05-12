@@ -3,9 +3,11 @@ import { ref, computed } from 'vue';
 import api from '../services/API';
 import type { CalendarVisibleRange } from '../types/Calendar';
 import type { CreateEventDto, Event, ParticipateDto } from '../types/Event';
+import { createLogger } from '../services/logger';
 
 const monthRequestCache = new Map<string, Promise<Event[]>>();
 const visibleLoadSequence = new Map<string, number>();
+const logger = createLogger('EventsStore');
 
 export const useEventsStore = defineStore('events', () => {
     const events = ref<Event[]>([]);
@@ -47,7 +49,10 @@ export const useEventsStore = defineStore('events', () => {
         } catch (err: any) {
             if (logError) {
                 error.value = err.response?.data?.message || errorMessage;
-                console.error(errorMessage, err);
+                logger.warn(errorMessage, {
+                    status: err.response?.status,
+                    message: err.response?.data?.message ?? err.message
+                });
             }
             return false;
         } finally {
@@ -64,6 +69,7 @@ export const useEventsStore = defineStore('events', () => {
         if (dedupe) {
             const inFlightRequest = monthRequestCache.get(rangeKey);
             if (inFlightRequest) {
+                logger.trace('Reusing in-flight calendar request', { rangeKey });
                 return inFlightRequest;
             }
         }
@@ -78,6 +84,7 @@ export const useEventsStore = defineStore('events', () => {
         }
 
         try {
+            logger.debug('Loading calendar events from API', { rangeKey, dedupe });
             return await request;
         } finally {
             if (dedupe) {
@@ -107,10 +114,12 @@ export const useEventsStore = defineStore('events', () => {
         if (applyToVisible) {
             visibleLoadSequence.set(rangeKey, requestId);
             activeRange.value = cloneRange(range);
+            logger.info('Loading visible calendar range', { rangeKey });
 
             const cachedEvents = rangeCache.value[rangeKey];
             if (cachedEvents) {
                 events.value = [...cachedEvents];
+                logger.trace('Applied cached calendar events', { rangeKey, count: cachedEvents.length });
             }
         }
 
@@ -127,6 +136,7 @@ export const useEventsStore = defineStore('events', () => {
                 }
 
                 storeVisibleEvents(rangeKey, fetchedEvents, applyToVisible);
+                logger.info('Calendar range loaded', { rangeKey, count: fetchedEvents.length });
                 return true;
             },
             {
@@ -156,6 +166,7 @@ export const useEventsStore = defineStore('events', () => {
     }
 
     async function refreshAllData() {
+        logger.debug('Refreshing all event data');
         return Promise.all([refreshActiveRange(), fetchUpcomingEvents()]);
     }
 
@@ -181,6 +192,7 @@ export const useEventsStore = defineStore('events', () => {
     // --- Actions ---
 
     async function fetchEvents() {
+        logger.debug('Fetching events for active range');
         return refreshActiveRange();
     }
 
@@ -194,6 +206,7 @@ export const useEventsStore = defineStore('events', () => {
         if (applyToVisible && !refresh && rangeCache.value[rangeKey]) {
             activeRange.value = cloneRange(range);
             events.value = [...rangeCache.value[rangeKey]];
+            logger.trace('Using cached visible calendar range', { rangeKey });
             return true;
         }
 
@@ -206,11 +219,13 @@ export const useEventsStore = defineStore('events', () => {
             return false;
         }
 
+        logger.debug('Refreshing active calendar range', { rangeKey: activeRange.value.monthKey });
         return fetchCalendarEvents(activeRange.value, { refresh: true, applyToVisible: true });
     }
 
     async function prefetchCalendarEvents(range: CalendarVisibleRange) {
         if (hasCachedOrActiveMonth(range)) {
+            logger.trace('Skipping prefetch for cached month', { rangeKey: range.monthKey });
             return true;
         }
 
@@ -237,6 +252,7 @@ export const useEventsStore = defineStore('events', () => {
 
     async function fetchEventById(id: number) {
         const result = await runEventsAction(`Failed to load event ${id}`, async () => {
+            logger.debug('Fetching event by id', { eventId: id });
             const response = await api.findOneEvent(id);
             const index = events.value.findIndex((e) => e.id === id);
             if (index !== -1) {
@@ -256,37 +272,46 @@ export const useEventsStore = defineStore('events', () => {
 
     async function fetchUpcomingEvents() {
         return runEventsAction('Failed to fetch upcoming events', async () => {
+            logger.debug('Fetching upcoming events');
             const response = await api.findUpcomingEvents();
             upcomingEvents.value = response.data;
+            logger.info('Upcoming events loaded', { count: upcomingEvents.value.length });
             return true;
         });
     }
 
     async function createEvent(dto: CreateEventDto) {
+        logger.info('Creating event', { title: dto.title });
         return mutateAndRefresh('Failed to create event', () => api.createEvent(dto));
     }
 
     async function updateEvent(id: number, dto: Partial<CreateEventDto>) {
+        logger.info('Updating event', { eventId: id });
         return mutateAndRefresh('Failed to update event', () => api.updateEvent(id, dto));
     }
 
     async function deleteEvent(id: number) {
+        logger.warn('Deleting event', { eventId: id });
         return mutateAndRefresh('Failed to delete event', () => api.deleteEvent(id));
     }
 
     async function joinEvent(id: number, dto?: ParticipateDto) {
+        logger.info('Joining event', { eventId: id });
         return mutateAndRefresh('Failed to join event', () => api.joinEvent(id, dto));
     }
 
     async function leaveEvent(id: number) {
+        logger.info('Leaving event', { eventId: id });
         return mutateAndRefresh('Failed to leave event', () => api.leaveEvent(id));
     }
 
     async function assignRide(eventId: number, passengerId: number, driverId: number | null) {
+        logger.info('Assigning ride', { eventId, passengerId, driverId });
         return mutateAndRefresh('Failed to assign ride', () => api.assignRide(eventId, passengerId, driverId));
     }
 
     async function assignRidesBatch(eventId: number, passengerIds: number[], driverId: number | null) {
+        logger.info('Assigning rides batch', { eventId, passengerCount: passengerIds.length, driverId });
         return mutateAndRefresh('Failed to assign rides', () =>
             Promise.all(passengerIds.map((id) => api.assignRide(eventId, id, driverId)))
         );

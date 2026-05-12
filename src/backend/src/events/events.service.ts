@@ -10,9 +10,12 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { NotificationCode } from '../notifications/notification-codes.js';
 import { EVENT_NOTIFICATION_MESSAGES, EVENT_NOTIFICATION_TITLES } from './event-notification.constants.js';
 import { mapEventToDto } from './event-response.mapper.js';
+import { AppLogger } from '../logging/app-logger.js';
 
 @Injectable()
 export class EventsService {
+    private readonly logger = new AppLogger(EventsService.name);
+
     constructor(
         @Inject(EventsRepository) private readonly eventsRepo: EventsRepository,
         @Inject(NotificationsService) private readonly notificationsService: NotificationsService
@@ -22,6 +25,11 @@ export class EventsService {
         const { participants = [], ...eventData } = createEventDto;
         const hostId = Number(userId);
         const participantIds = this.normalizeUserIds(participants);
+        this.logger.info('Creating event', {
+            hostId,
+            title: eventData.title,
+            participantCount: participantIds.length
+        });
 
         try {
             const event = await this.eventsRepo.create({
@@ -49,34 +57,51 @@ export class EventsService {
                 );
             }
 
+            this.logger.info('Event created', { eventId: event.id, hostId, participantCount: participantIds.length });
             return mapEventToDto(event);
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+                this.logger.warn('Event create failed: referenced user not found', {
+                    hostId,
+                    participantIds
+                });
                 throw new NotFoundException(
                     `User in host or participants not found. IDs: host=${hostId}, participants=[${participantIds.join(', ')}]`
                 );
             }
+            this.logger.error('Failed to create event', error instanceof Error ? error.stack ?? error.message : String(error));
             throw error;
         }
     }
 
     async findAll(userId: number, query: FindEventsQueryDto): Promise<EventResponseDto[]> {
         if (query.start > query.end) {
+            this.logger.warn('Rejected event range query', {
+                userId,
+                start: query.start,
+                end: query.end
+            });
             throw new BadRequestException('start must be before or equal to end');
         }
 
+        this.logger.debug('Fetching calendar events', { userId, start: query.start, end: query.end });
         const events = await this.eventsRepo.findAll(userId, query.start, query.end);
+        this.logger.info('Calendar events loaded', { userId, count: events.length });
         return events.map((event) => mapEventToDto(event));
     }
 
     async findUpcoming(userId: number): Promise<EventResponseDto[]> {
+        this.logger.debug('Fetching upcoming events', { userId });
         const events = await this.eventsRepo.findUpcoming(userId);
+        this.logger.info('Upcoming events loaded', { userId, count: events.length });
         return events.map((event) => mapEventToDto(event));
     }
 
     async findOne(id: number, userId?: number): Promise<EventResponseDto> {
+        this.logger.trace('Fetching event', { eventId: id, userId });
         const event = await this.eventsRepo.findOne(id, userId);
         if (!event) {
+            this.logger.warn('Event not found', { eventId: id, userId });
             throw new NotFoundException(`Event with id ${id} not found`);
         }
 
@@ -84,9 +109,11 @@ export class EventsService {
     }
 
     async remove(id: number, userId: number) {
+        this.logger.warn('Removing event', { eventId: id, userId });
         const event = await this.findEventOrThrow(id, userId);
 
         if (event.hostId !== userId) {
+            this.logger.warn('Event removal forbidden for non-host', { eventId: id, userId, hostId: event.hostId });
             throw new ForbiddenException('Only the host can delete this event');
         }
 
@@ -99,13 +126,16 @@ export class EventsService {
             EVENT_NOTIFICATION_MESSAGES.eventCancelled(event.title)
         );
 
+        this.logger.info('Event removed', { eventId: id, userId });
         return this.eventsRepo.remove(id);
     }
 
     async update(id: number, updateEventDto: UpdateEventDto, userId: number): Promise<EventResponseDto> {
+        this.logger.info('Updating event', { eventId: id, userId, fields: Object.keys(updateEventDto) });
         const event = await this.findEventOrThrow(id, userId);
 
         if (event.hostId !== userId) {
+            this.logger.warn('Event update forbidden for non-host', { eventId: id, userId, hostId: event.hostId });
             throw new ForbiddenException('Only the host can update this event');
         }
 
@@ -127,6 +157,10 @@ export class EventsService {
             }
 
             if (toRemove.length > 0) {
+                this.logger.debug('Removing ride assignments for departing participants', {
+                    eventId: id,
+                    userIds: toRemove
+                });
                 await this.eventsRepo.deleteRideAssignmentsForUsers(id, toRemove);
             }
         }
@@ -155,13 +189,20 @@ export class EventsService {
             InviteStatus.ACCEPTED
         );
 
+        this.logger.info('Event updated', {
+            eventId: id,
+            userId,
+            participantDiff
+        });
         return mapEventToDto(updatedEvent);
     }
 
     async invite(eventId: number, username: string, userId: number) {
+        this.logger.info('Inviting user to event', { eventId, username, userId });
         const event = await this.findEventOrThrow(eventId, userId);
 
         if (event.hostId !== userId) {
+            this.logger.warn('Event invite forbidden for non-host', { eventId, userId, hostId: event.hostId });
             throw new ForbiddenException('Only the host can invite users');
         }
 
@@ -179,10 +220,12 @@ export class EventsService {
             );
         }
 
+        this.logger.info('Invitation processed', { eventId, invitedUsername: username, invitedUserId: invitedUser?.id ?? null });
         return { message: 'User invited' };
     }
 
     async join(eventId: number, userId: number, participateDto: ParticipateDto) {
+        this.logger.info('Joining event', { eventId, userId });
         const event = await this.findEventOrThrow(eventId, userId);
         const participant = this.getParticipant(event, userId);
         const isParticipant = !!participant;
@@ -190,10 +233,12 @@ export class EventsService {
         this.validateEventNotEnded(event);
 
         if (!event.isOpen && !isParticipant && event.hostId !== userId) {
+            this.logger.warn('Join rejected: event is closed', { eventId, userId });
             throw new ForbiddenException('This event is closed and cannot be joined spontaneously');
         }
 
         if (event.participationDeadline && new Date() > event.participationDeadline && event.hostId !== userId) {
+            this.logger.warn('Join rejected: participation deadline passed', { eventId, userId });
             throw new ForbiddenException('The participation deadline for this event has passed');
         }
 
@@ -225,10 +270,12 @@ export class EventsService {
             }
         }
 
+        this.logger.info('Event participation saved', { eventId, userId, isParticipant });
         return result;
     }
 
     async leave(eventId: number, userId: number) {
+        this.logger.info('Leaving event', { eventId, userId });
         const event = await this.findEventOrThrow(eventId, userId);
 
         this.validateEventNotEnded(event);
@@ -252,16 +299,25 @@ export class EventsService {
                 }
             }
 
+            this.logger.info('Event participation removed', { eventId, userId });
             return result;
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+                this.logger.warn('Leave rejected: participation not found', { eventId, userId });
                 throw new NotFoundException('Participation not found');
             }
+            this.logger.error('Failed to leave event', error instanceof Error ? error.stack ?? error.message : String(error));
             throw error;
         }
     }
 
     async assignRide(eventId: number, passengerId: number, driverId: number | null, requestingUserId: number) {
+        this.logger.info('Assigning ride', {
+            eventId,
+            passengerId,
+            driverId,
+            requestingUserId
+        });
         const event = await this.findEventOrThrow(eventId, requestingUserId);
 
         this.validateEventNotEnded(event);
@@ -280,10 +336,22 @@ export class EventsService {
 
         if (!isHost && !isAssigningToSelf && !isUnassigningFromSelf) {
             if (driverId !== null) {
+                this.logger.warn('Ride assignment forbidden', {
+                    eventId,
+                    passengerId,
+                    driverId,
+                    requestingUserId
+                });
                 throw new ForbiddenException(
                     'Only the host or the driver of the vehicle can assign passengers to this car'
                 );
             } else {
+                this.logger.warn('Ride unassignment forbidden', {
+                    eventId,
+                    passengerId,
+                    driverId,
+                    requestingUserId
+                });
                 throw new ForbiddenException('Only the host or the current driver can remove passengers from this car');
             }
         }
@@ -291,10 +359,20 @@ export class EventsService {
         if (driverId !== null) {
             const driver = this.getParticipant(event, driverId);
             if (!driver) {
+                this.logger.warn('Ride assignment rejected: driver not in event', {
+                    eventId,
+                    passengerId,
+                    driverId
+                });
                 throw new NotFoundException(`Driver with id ${driverId} is not in this event`);
             }
 
             if (driver.transportMode !== 'DRIVER') {
+                this.logger.warn('Ride assignment rejected: selected driver has no vehicle', {
+                    eventId,
+                    passengerId,
+                    driverId
+                });
                 throw new ForbiddenException('Selected driver does not have a vehicle for this event');
             }
         }
@@ -311,6 +389,7 @@ export class EventsService {
             );
         }
 
+        this.logger.info('Ride assignment updated', { eventId, passengerId, driverId, requestingUserId });
         return this.findOne(eventId, requestingUserId);
     }
 
@@ -395,6 +474,7 @@ export class EventsService {
     private async findEventOrThrow(id: number, userId?: number): Promise<EventWithRelations> {
         const event = await this.eventsRepo.findOne(id, userId);
         if (!event) {
+            this.logger.warn('Event not found', { eventId: id, userId });
             throw new NotFoundException(`Event with id ${id} not found`);
         }
 
@@ -419,6 +499,7 @@ export class EventsService {
             : await this.eventsRepo.getParticipantTokens(eventId);
 
         if (tokens.length > 0) {
+            this.logger.debug('Sending participant notification', { eventId, type, recipientCount: tokens.length });
             await this.notificationsService.sendMulticast(tokens, title, body, { type, eventId: String(eventId) });
         }
     }
@@ -433,6 +514,7 @@ export class EventsService {
         const tokens = await this.eventsRepo.getUserTokens(userIds);
 
         if (tokens.length > 0) {
+            this.logger.debug('Sending direct notification', { eventId, type, recipientCount: tokens.length });
             await this.notificationsService.sendMulticast(tokens, title, body, { type, eventId: String(eventId) });
         }
     }

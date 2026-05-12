@@ -2,6 +2,7 @@ import { computed, onBeforeUnmount, ref, unref, watch, type Ref, type ComputedRe
 import { io, type Socket } from 'socket.io-client';
 import api, { socketBaseURL, socketPath } from '../services/API';
 import { useSessionStore } from '../stores/session';
+import { createLogger } from '../services/logger';
 import type {
     ChatEditedMessage,
     ChatHistoryResponse,
@@ -23,6 +24,7 @@ type TypingUser = {
 };
 
 const PAGE_SIZE = 50;
+const logger = createLogger('EventChat');
 
 export function useEventChat(eventIdInput: MaybeRefNumber) {
     const sessionStore = useSessionStore();
@@ -46,6 +48,7 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
     const currentUsername = computed(() => sessionStore.currentUser?.username ?? '');
 
     const reconnect = async () => {
+        logger.info('Reconnecting chat');
         disconnect();
         await connect();
     };
@@ -54,6 +57,7 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
         const id = eventId.value;
         const token = localStorage.getItem('token');
         if (!id || !token) {
+            logger.trace('Skipping chat connection', { eventId: id, hasToken: Boolean(token) });
             return;
         }
 
@@ -71,19 +75,23 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
         socket.on('connect', () => {
             connected.value = true;
             connectionError.value = null;
+            logger.info('Chat socket connected', { eventId: id, socketId: socket?.id });
             socket?.emit('joinRoom', { eventId: id });
         });
 
         socket.on('disconnect', () => {
             connected.value = false;
+            logger.warn('Chat socket disconnected', { eventId: id });
         });
 
         socket.on('connect_error', (error) => {
             connectionError.value = error.message || 'Failed to connect to chat';
+            logger.error('Chat socket connect error', error);
         });
 
         socket.on('error', (error: { message?: string }) => {
             connectionError.value = error?.message || 'Chat error';
+            logger.warn('Chat socket error', error);
         });
 
         socket.on('newMessage', (message: ChatMessageEventPayload) => {
@@ -153,10 +161,12 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
                 socket.disconnect();
             } catch {
                 // Best effort cleanup.
+                logger.warn('Chat socket cleanup failed');
             }
         }
         socket = null;
         eventRoomId = null;
+        logger.debug('Chat socket disconnected locally');
     };
 
     const loadHistory = async () => {
@@ -165,10 +175,16 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
 
         loadingHistory.value = true;
         try {
+            logger.debug('Loading chat history', { eventId: id });
             const response = await api.getChatHistory(id, undefined, PAGE_SIZE);
             applyHistory(response.data);
         } catch (error: any) {
             connectionError.value = error?.response?.data?.message || 'Failed to load chat history';
+            logger.warn('Failed to load chat history', {
+                eventId: id,
+                status: error?.response?.status,
+                message: error?.response?.data?.message ?? error.message
+            });
         } finally {
             loadingHistory.value = false;
         }
@@ -180,10 +196,16 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
 
         loadingPinned.value = true;
         try {
+            logger.debug('Loading pinned chat messages', { eventId: id });
             const response = await api.getPinnedChatMessages(id);
             pinnedMessages.value = dedupeMessages(response.data.map(normalizeMessage)).sort(sortMessagesAsc);
         } catch (error: any) {
             connectionError.value = error?.response?.data?.message || 'Failed to load pinned messages';
+            logger.warn('Failed to load pinned messages', {
+                eventId: id,
+                status: error?.response?.status,
+                message: error?.response?.data?.message ?? error.message
+            });
         } finally {
             loadingPinned.value = false;
         }
@@ -197,6 +219,7 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
 
         loadingMore.value = true;
         try {
+            logger.debug('Loading more chat history', { eventId: id, cursor: nextCursor.value });
             const response = await api.getChatHistory(id, nextCursor.value, PAGE_SIZE);
             const nextPage = response.data.messages.map(normalizeMessage).sort(sortMessagesAsc);
             messages.value = dedupeMessages([...nextPage, ...messages.value]).sort(sortMessagesAsc);
@@ -222,6 +245,7 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
 
         sending.value = true;
         try {
+            logger.info('Sending chat message', { eventId: id, hasMedia });
             let mediaUrl: string | null = null;
             let mediaType: string | null = null;
 
@@ -237,39 +261,47 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
                 mediaUrl,
                 mediaType
             });
+            logger.debug('Chat message emitted', { eventId: id, hasMedia });
         } finally {
             sending.value = false;
         }
     };
 
     const toggleReaction = (messageId: number, emoji: string) => {
+        logger.debug('Toggling reaction', { eventId: eventId.value, messageId, emoji });
         socket?.emit('addReaction', { messageId, emoji });
     };
 
     const pinMessage = (messageId: number) => {
+        logger.warn('Pinning message', { eventId: eventId.value, messageId });
         socket?.emit('pinMessage', { messageId });
     };
 
     const unpinMessage = (messageId: number) => {
+        logger.warn('Unpinning message', { eventId: eventId.value, messageId });
         socket?.emit('unpinMessage', { messageId });
     };
 
     const deleteMessage = (messageId: number) => {
+        logger.warn('Deleting message', { eventId: eventId.value, messageId });
         socket?.emit('deleteMessage', { messageId });
     };
 
     const editMessage = (messageId: number, text: string) => {
+        logger.info('Editing message', { eventId: eventId.value, messageId });
         socket?.emit('editMessage', { messageId, text });
     };
 
     const startTyping = () => {
         if (eventId.value) {
+            logger.trace('Typing started', { eventId: eventId.value });
             socket?.emit('typing', { eventId: eventId.value });
         }
     };
 
     const stopTyping = () => {
         if (eventId.value) {
+            logger.trace('Typing stopped', { eventId: eventId.value });
             socket?.emit('stopTyping', { eventId: eventId.value });
         }
     };
@@ -318,6 +350,7 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
         eventId,
         async (next, previous) => {
             if (next === previous) return;
+            logger.debug('Chat event changed', { previousEventId: previous, nextEventId: next });
             disconnect();
             messages.value = [];
             pinnedMessages.value = [];

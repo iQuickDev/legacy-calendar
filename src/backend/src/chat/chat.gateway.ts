@@ -8,13 +8,14 @@ import {
     ConnectedSocket,
     MessageBody
 } from '@nestjs/websockets';
-import { Inject, Logger } from '@nestjs/common';
+import { Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { ChatMediaType } from '../../prisma/generated/client.js';
 import { ChatService } from './chat.service.js';
 import { HttpException } from '@nestjs/common';
+import { AppLogger } from '../logging/app-logger.js';
 
 type SocketUser = {
     userId: number;
@@ -38,7 +39,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @WebSocketServer()
     server!: Server;
 
-    private readonly logger = new Logger(ChatGateway.name);
+    private readonly logger = new AppLogger(ChatGateway.name);
 
     constructor(
         @Inject(ChatService) private readonly chatService: ChatService,
@@ -55,12 +56,14 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     handleConnection(client: Socket) {
         const user = this.getSocketUser(client);
         if (user) {
-            this.logger.log(`Client connected: ${client.id} (User: ${user.username})`);
+            this.logger.info('Client connected', { socketId: client.id, userId: user.userId, username: user.username });
+        } else {
+            this.logger.debug('Client connected without authenticated user', { socketId: client.id });
         }
     }
 
     handleDisconnect(client: Socket) {
-        this.logger.log(`Client disconnected: ${client.id}`);
+        this.logger.info('Client disconnected', { socketId: client.id });
     }
 
     @SubscribeMessage('joinRoom')
@@ -76,13 +79,18 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         const roomName = `chat:${eventId}`;
 
         if (!isParticipant) {
+            this.logger.warn('Room join rejected: user is not a participant', {
+                socketId: client.id,
+                userId: user.userId,
+                eventId
+            });
             client.emit('error', { code: 403, message: 'Forbidden' });
             await client.leave(roomName);
             return;
         }
 
         await client.join(roomName);
-        this.logger.log(`User ${user.userId} joined room ${roomName}`);
+        this.logger.info('Room joined', { socketId: client.id, userId: user.userId, roomName });
     }
 
     @SubscribeMessage('leaveRoom')
@@ -137,6 +145,12 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
                 mediaType,
                 connectedUserIds
             );
+            this.logger.info('Socket message sent', {
+                socketId: client.id,
+                userId: user.userId,
+                eventId,
+                hasMedia: Boolean(mediaUrl)
+            });
             this.server.to(roomName).emit('newMessage', message);
         } catch (error) {
             this.emitSocketError(client, error);
@@ -170,6 +184,12 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             }
 
             const reaction = await this.chatService.toggleReaction(messageId, user.userId, emoji, message.eventId);
+            this.logger.info('Socket reaction updated', {
+                socketId: client.id,
+                userId: user.userId,
+                messageId,
+                emoji
+            });
             this.server
                 .to(`chat:${reaction.eventId}`)
                 .emit('reactionUpdated', this.chatService.toReactionPayload(reaction.messageId, reaction.reactions));
@@ -189,6 +209,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
         try {
             const message = await this.chatService.pinMessage(messageId, user.userId, user.isAdmin);
+            this.logger.info('Socket message pinned', { socketId: client.id, userId: user.userId, messageId });
             this.server.to(`chat:${message.eventId}`).emit('messagePinned', { messageId });
         } catch (error) {
             this.emitSocketError(client, error);
@@ -206,6 +227,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
         try {
             const message = await this.chatService.unpinMessage(messageId, user.userId, user.isAdmin);
+            this.logger.info('Socket message unpinned', { socketId: client.id, userId: user.userId, messageId });
             this.server.to(`chat:${message.eventId}`).emit('messageUnpinned', { messageId });
         } catch (error) {
             this.emitSocketError(client, error);
@@ -223,6 +245,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
         try {
             const message = await this.chatService.deleteMessage(messageId, user.userId, user.isAdmin);
+            this.logger.warn('Socket message deleted', { socketId: client.id, userId: user.userId, messageId });
             this.server.to(`chat:${message.eventId}`).emit('messageDeleted', { messageId });
         } catch (error) {
             this.emitSocketError(client, error);
@@ -255,6 +278,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
         try {
             const message = await this.chatService.editMessage(messageId, user.userId, text);
+            this.logger.info('Socket message edited', { socketId: client.id, userId: user.userId, messageId });
             this.server
                 .to(`chat:${message.eventId}`)
                 .emit('messageEdited', this.chatService.toEditedMessagePayload(message));
@@ -314,10 +338,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             }
 
             (socket.data as { user?: SocketUser }).user = user;
+            this.logger.debug('Socket authenticated', { socketId: socket.id, userId: user.userId, username: user.username });
             next();
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            this.logger.warn(`Socket authentication failed: ${message}`);
+            this.logger.warn('Socket authentication failed', { socketId: socket.id, reason: message });
             next(this.buildHandshakeError(401, 'Unauthorized'));
         }
     }
@@ -345,6 +370,7 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     private emitSocketError(client: Socket, error: unknown) {
         const status = this.getErrorStatus(error);
         const message = error instanceof Error ? error.message : 'Internal server error';
+        this.logger.warn('Socket operation failed', { socketId: client.id, status, message });
         client.emit('error', { code: status, message });
     }
 

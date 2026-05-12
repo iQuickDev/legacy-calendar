@@ -2,6 +2,9 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import api from '../services/API';
 import type { User, CreateUserDto, UpdateUserDto } from '../types/User';
+import { createLogger } from '../services/logger';
+
+const logger = createLogger('UsersStore');
 
 export const useUsersStore = defineStore('users', () => {
     const users = ref<User[]>([]);
@@ -14,6 +17,7 @@ export const useUsersStore = defineStore('users', () => {
 
     async function fetchUsers(force = false) {
         if (!force && lastFetched.value && Date.now() - lastFetched.value < CACHE_TTL) {
+            logger.trace('Returning cached users list');
             return users.value;
         }
 
@@ -23,13 +27,18 @@ export const useUsersStore = defineStore('users', () => {
             loading.value = true;
             error.value = null;
             try {
+                logger.info('Fetching users');
                 const response = await api.findAllUsers();
                 users.value = response.data;
                 lastFetched.value = Date.now();
+                logger.info('Users loaded', { count: users.value.length });
                 return users.value;
             } catch (err: any) {
                 error.value = err.response?.data?.message || 'Failed to fetch users';
-                console.error('Failed to fetch users:', err);
+                logger.warn('Failed to fetch users', {
+                    status: err.response?.status,
+                    message: err.response?.data?.message ?? err.message
+                });
                 return [];
             } finally {
                 loading.value = false;
@@ -41,28 +50,35 @@ export const useUsersStore = defineStore('users', () => {
     }
 
     async function createUser(dto: CreateUserDto) {
+        logger.info('Creating user', { username: dto.username });
         const response = await api.createUser(dto);
         await fetchUsers(true);
+        logger.info('User created', { userId: response.data.id, username: response.data.username });
         return response.data;
     }
 
     async function updateUser(id: number, dto: UpdateUserDto) {
+        logger.info('Updating user', { userId: id });
         const response = await api.updateUser(id, dto);
         await fetchUsers(true);
+        logger.info('User updated', { userId: id });
         return response.data;
     }
 
     async function removeUser(id: number) {
+        logger.warn('Removing user', { userId: id });
         await api.removeUser(id);
         await fetchUsers(true);
     }
 
     async function uploadProfilePicture(file: File, userId: number) {
+        logger.info('Uploading profile picture', { userId, fileName: file.name });
         await api.uploadProfilePicture(file, userId);
         await fetchUsers(true);
     }
 
     async function removeProfilePicture(userId: number) {
+        logger.info('Removing profile picture', { userId });
         await api.removeProfilePicture(userId);
         await fetchUsers(true);
     }

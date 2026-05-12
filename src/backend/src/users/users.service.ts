@@ -1,5 +1,5 @@
 import 'multer';
-import { ConflictException, Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { Prisma, User as UserModel } from '../../prisma/generated/client.js';
 
 import { mkdir } from 'fs/promises';
@@ -8,33 +8,41 @@ import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { UserDto } from './dto/user.dto.js';
 import { UsersRepository } from './users.repository.js';
+import { AppLogger } from '../logging/app-logger.js';
 
 @Injectable()
 export class UsersService {
-    private readonly logger = new Logger(UsersService.name);
+    private readonly logger = new AppLogger(UsersService.name);
 
     constructor(@Inject(UsersRepository) private readonly usersRepo: UsersRepository) {}
 
     async create(createUserDto: CreateUserDto): Promise<UserDto> {
+        this.logger.info('Creating user', { username: createUserDto.username });
         try {
             const hashedPassword = await Bun.password.hash(createUserDto.password);
-            return await this.usersRepo.create({
+            const user = await this.usersRepo.create({
                 username: createUserDto.username,
                 password: hashedPassword
             });
+            this.logger.info('User created', { userId: user.id, username: user.username });
+            return user;
         } catch (error) {
             this.throwFriendlyUserError(error, 'Username already taken');
+            this.logger.error('Failed to create user', error instanceof Error ? error.stack ?? error.message : String(error));
             throw error;
         }
     }
 
     findAll(): Promise<UserDto[]> {
+        this.logger.debug('Fetching users list');
         return this.usersRepo.findAll();
     }
 
     async findOne(id: number): Promise<UserDto> {
+        this.logger.trace('Fetching user', { userId: id });
         const user = await this.usersRepo.findOne(id);
         if (!user) {
+            this.logger.warn('User not found', { userId: id });
             throw new NotFoundException(`User with id ${id} not found`);
         }
 
@@ -50,6 +58,7 @@ export class UsersService {
     }
 
     async update(id: number, updateUserDto: UpdateUserDto): Promise<UserDto> {
+        this.logger.info('Updating user', { userId: id, fields: Object.keys(updateUserDto) });
         try {
             const updateData: Prisma.UserUpdateInput = { ...updateUserDto };
 
@@ -57,23 +66,31 @@ export class UsersService {
                 updateData.password = await Bun.password.hash(updateUserDto.password);
             }
 
-            return await this.usersRepo.update(id, updateData);
+            const user = await this.usersRepo.update(id, updateData);
+            this.logger.info('User updated', { userId: id });
+            return user;
         } catch (error) {
             this.handleUserWriteError(error, id);
+            this.logger.error('Failed to update user', error instanceof Error ? error.stack ?? error.message : String(error));
             throw error;
         }
     }
 
     async remove(id: number): Promise<UserDto> {
+        this.logger.warn('Removing user', { userId: id });
         try {
-            return await this.usersRepo.remove(id);
+            const user = await this.usersRepo.remove(id);
+            this.logger.info('User removed', { userId: id, username: user.username });
+            return user;
         } catch (error) {
             this.handleUserWriteError(error, id);
+            this.logger.error('Failed to remove user', error instanceof Error ? error.stack ?? error.message : String(error));
             throw error;
         }
     }
 
     async uploadProfilePicture(id: number, file: Express.Multer.File): Promise<UserDto> {
+        this.logger.info('Uploading profile picture', { userId: id, fileName: file.originalname, size: file.size });
         await this.findOne(id);
 
         const uploadDir = path.join(process.cwd(), 'uploads', 'profile-pictures');
@@ -88,15 +105,20 @@ export class UsersService {
         /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 
         const publicUrl = `/uploads/profile-pictures/${filename}`;
-        return this.usersRepo.update(id, { profilePicture: publicUrl });
+        const user = await this.usersRepo.update(id, { profilePicture: publicUrl });
+        this.logger.info('Profile picture uploaded', { userId: id, path: publicUrl });
+        return user;
     }
 
     async removeProfilePicture(id: number): Promise<UserDto> {
+        this.logger.info('Removing profile picture', { userId: id });
         const user = await this.findOne(id);
 
         await this.deleteLocalProfilePicture(user.profilePicture);
 
-        return this.usersRepo.update(id, { profilePicture: null });
+        const updatedUser = await this.usersRepo.update(id, { profilePicture: null });
+        this.logger.info('Profile picture removed', { userId: id });
+        return updatedUser;
     }
 
     private async deleteLocalProfilePicture(profilePicture: string | null | undefined): Promise<void> {
@@ -113,7 +135,7 @@ export class UsersService {
                 await f.delete();
             }
         } catch {
-            this.logger.warn(`Failed to delete profile picture file ${filePath}`);
+            this.logger.warn('Failed to delete profile picture file', { filePath });
         }
     }
 

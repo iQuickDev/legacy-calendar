@@ -4,6 +4,7 @@ import { fetchWeatherApi } from 'openmeteo';
 import type { Event } from '../types/Event';
 import type { EventWeather } from '../types/Weather';
 import { useGeocode } from './useGeocode';
+import { createLogger } from '../services/logger';
 
 // Persistent Cache Keys (Prefixes)
 const FORECAST_PREFIX = 'weather_forecast_';
@@ -106,6 +107,7 @@ export const mapWeatherCodeToSummary = (
 const weatherByEventId = ref<Record<number, EventWeather>>({});
 const loadingWeather = ref(false);
 const weatherError = ref<string | null>(null);
+const logger = createLogger('Weather');
 
 export function useEventWeather(events?: Ref<Event[]>) {
     let isProcessing = false;
@@ -129,10 +131,11 @@ export function useEventWeather(events?: Ref<Event[]>) {
             // Historical forecasts (past weeks) can be cached indefinitely
             const isHistorical = weekStart.getTime() < Date.now() - 7 * 24 * 60 * 60 * 1000;
             if (cached && (isHistorical || Date.now() - cached.timestamp < FORECAST_CACHE_TTL)) {
+                logger.trace('Forecast cache hit', { cacheKey });
                 return cached.data;
             }
         } catch (e) {
-            console.warn('IndexedDB read error:', e);
+            logger.warn('IndexedDB read error while reading forecast cache', e);
         }
 
         // 2. Check in-flight requests
@@ -144,6 +147,7 @@ export function useEventWeather(events?: Ref<Event[]>) {
         // 3. Perform request using SDK
         const forecastPromise = (async () => {
             try {
+                logger.debug('Fetching forecast', { lat, lon, startStr, endStr });
                 const hourlyVariables = [
                     'temperature_2m',
                     'weather_code',
@@ -213,9 +217,10 @@ export function useEventWeather(events?: Ref<Event[]>) {
                 };
 
                 await set(cacheKey, { data, timestamp: Date.now() });
+                logger.info('Forecast fetched', { cacheKey, lat, lon });
                 return data;
             } catch (e) {
-                console.error('Forecast fetch error (SDK):', e);
+                logger.error('Forecast fetch error (SDK)', e);
                 return null;
             } finally {
                 pendingForecasts.delete(inFlightKey);
@@ -242,10 +247,16 @@ export function useEventWeather(events?: Ref<Event[]>) {
         }
 
         const geo = await getOrResolveCoords(event);
-        if (!geo) return;
+        if (!geo) {
+            logger.warn('Skipping weather processing: geocode unavailable', { eventId: event.id });
+            return;
+        }
 
         const forecast = await fetchForecast(geo.lat, geo.lon, eventDate);
-        if (!forecast || !forecast.hourly) return;
+        if (!forecast || !forecast.hourly) {
+            logger.warn('Skipping weather processing: forecast unavailable', { eventId: event.id });
+            return;
+        }
 
         const eventTime = new Date(event.startTime).getTime();
         let closestIndex = 0;
@@ -297,13 +308,15 @@ export function useEventWeather(events?: Ref<Event[]>) {
         };
 
         weatherFetchSignatures.set(event.id, signature);
+        logger.info('Weather processed for event', { eventId: event.id, location: event.location });
     };
 
     const loadWeatherForEvent = async (event: Event) => {
         try {
+            logger.debug('Loading weather for event', { eventId: event.id });
             await processEventWeather(event);
         } catch (e) {
-            console.error('Single event weather error:', e);
+            logger.error('Single event weather error', e);
         }
     };
 
@@ -315,11 +328,12 @@ export function useEventWeather(events?: Ref<Event[]>) {
         weatherError.value = null;
 
         try {
+            logger.debug('Loading weather for events', { count: events.value.length });
             for (const event of events.value) {
                 await processEventWeather(event);
             }
         } catch (e) {
-            console.error('Global weather error:', e);
+            logger.error('Global weather error', e);
             weatherError.value = 'Failed to load weather data';
         } finally {
             loadingWeather.value = false;
@@ -338,6 +352,7 @@ export function useEventWeather(events?: Ref<Event[]>) {
             if (!newVal) return;
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
+                logger.trace('Weather load debounce fired', { count: newVal.length });
                 loadWeatherForEvents();
             }, 500);
         },

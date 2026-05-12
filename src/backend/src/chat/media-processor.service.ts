@@ -1,12 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import ffmpeg from 'fluent-ffmpeg';
+import { AppLogger } from '../logging/app-logger.js';
 
 @Injectable()
 export class MediaProcessorService {
-    private readonly logger = new Logger(MediaProcessorService.name);
+    private readonly logger = new AppLogger(MediaProcessorService.name);
 
     async processImage(inputPath: string, outputPath: string): Promise<void> {
+        this.logger.debug('Processing chat image', { inputPath, outputPath });
         /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
         // @ts-expect-error Bun.Image is not in the types yet
         await new Bun.Image(inputPath)
@@ -20,6 +22,7 @@ export class MediaProcessorService {
     }
 
     async processVideo(inputPath: string, outputPath: string): Promise<void> {
+        this.logger.debug('Processing chat video', { inputPath, outputPath });
         return new Promise((resolve, reject) => {
             ffmpeg(inputPath)
                 .outputOptions([
@@ -31,10 +34,11 @@ export class MediaProcessorService {
                 ])
                 .toFormat('mp4')
                 .on('error', (err) => {
-                    this.logger.error(`Error processing video: ${err.message}`);
+                    this.logger.error('Error processing video', err instanceof Error ? err.stack ?? err.message : String(err));
                     reject(err);
                 })
                 .on('end', () => {
+                    this.logger.info('Chat video processed', { inputPath, outputPath });
                     resolve();
                 })
                 .save(outputPath);

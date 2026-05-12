@@ -4,6 +4,9 @@ import type { Session } from '../types/Session';
 import api from '../services/API';
 import type { AuthLoginDto } from '../types/Auth';
 import type { User } from '../types/User';
+import { createLogger } from '../services/logger';
+
+const logger = createLogger('SessionStore');
 
 export const useSessionStore = defineStore('session', () => {
     const session = ref<Session>({} as Session);
@@ -20,6 +23,7 @@ export const useSessionStore = defineStore('session', () => {
     async function login(credentials: AuthLoginDto) {
         loading.value = true;
         error.value = null;
+        logger.info('Login started', { username: credentials.username });
         try {
             const loginResponse = await api.login(credentials);
             const token = loginResponse.data.access_token;
@@ -31,10 +35,16 @@ export const useSessionStore = defineStore('session', () => {
             // Fetch user profile
             const profileResponse = await api.getProfile();
             session.value.user = profileResponse.data;
+            logger.info('Login completed', { userId: profileResponse.data.id, username: profileResponse.data.username });
 
             return true;
         } catch (err: any) {
             error.value = err.response?.data?.message || 'Login failed. Please check your credentials.';
+            logger.warn('Login failed', {
+                username: credentials.username,
+                status: err.response?.status,
+                message: err.response?.data?.message ?? err.message
+            });
             localStorage.removeItem('token');
             session.value = {} as Session;
             return false;
@@ -51,6 +61,7 @@ export const useSessionStore = defineStore('session', () => {
         }
         loading.value = true;
         error.value = null;
+        logger.debug('Restoring session from local storage');
         try {
             session.value.token = token;
             const response = await api.getProfile();
@@ -58,10 +69,12 @@ export const useSessionStore = defineStore('session', () => {
                 token,
                 user: response.data
             };
+            logger.info('Session restored', { userId: response.data.id, username: response.data.username });
             return true;
         } catch {
             // Token is invalid or expired
             error.value = 'Session expired. Please log in again.';
+            logger.warn('Stored session expired');
             localStorage.removeItem('token');
             session.value = {} as Session;
             return false;
@@ -74,15 +87,17 @@ export const useSessionStore = defineStore('session', () => {
         const fcmToken = localStorage.getItem('fcm_token');
         if (fcmToken) {
             try {
+                logger.debug('Unsubscribing notifications on logout');
                 await api.unsubscribeNotifications(fcmToken);
             } catch (err) {
-                console.warn('Failed to unsubscribe from notifications on logout:', err);
+                logger.warn('Failed to unsubscribe from notifications on logout', err);
             } finally {
                 localStorage.removeItem('fcm_token');
             }
         }
         session.value = {} as Session;
         localStorage.removeItem('token');
+        logger.info('Logged out');
     }
 
     function clearError() {
@@ -98,10 +113,12 @@ export const useSessionStore = defineStore('session', () => {
     async function changePassword(currentPassword: string, newPassword: string) {
         try {
             loading.value = true;
+            logger.info('Changing password');
             await api.changePassword({ currentPassword, newPassword });
+            logger.info('Password changed');
             return true;
         } catch (error: any) {
-            console.error('Failed to change password:', error);
+            logger.error('Failed to change password', error);
             throw error;
         } finally {
             loading.value = false;
@@ -110,6 +127,7 @@ export const useSessionStore = defineStore('session', () => {
 
     async function uploadProfilePicture(file: File) {
         try {
+            logger.info('Uploading profile picture', { fileName: file.name, size: file.size });
             const response = await api.uploadProfilePicture(file);
             if (session.value.user) {
                 session.value.user = {
@@ -117,15 +135,17 @@ export const useSessionStore = defineStore('session', () => {
                     profilePicture: `${response.data.profilePicture}?t=${Date.now()}`
                 };
             }
+            logger.info('Profile picture uploaded');
             return true;
         } catch (error) {
-            console.error('Failed to upload profile picture:', error);
+            logger.error('Failed to upload profile picture', error);
             throw error;
         }
     }
 
     async function removeProfilePicture() {
         try {
+            logger.info('Removing profile picture');
             await api.removeProfilePicture();
             if (session.value.user) {
                 session.value.user = {
@@ -133,9 +153,10 @@ export const useSessionStore = defineStore('session', () => {
                     profilePicture: undefined
                 };
             }
+            logger.info('Profile picture removed');
             return true;
         } catch (error) {
-            console.error('Failed to remove profile picture:', error);
+            logger.error('Failed to remove profile picture', error);
             throw error;
         }
     }

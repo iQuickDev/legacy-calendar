@@ -5,6 +5,7 @@ import { initializeApp } from 'firebase/app';
 import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
 import { notificationStorage } from './services/notificationStorage';
 import { NotificationCode } from './types/Notification';
+import { createLogger } from './services/logger';
 
 declare let self: ServiceWorkerGlobalScope;
 
@@ -26,16 +27,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
+const logger = createLogger('ServiceWorker');
 
 onBackgroundMessage(messaging, async (payload) => {
-    console.log('[firebase-messaging-sw.js] Received background message ', payload);
+    logger.info('Received background message', payload);
 
     // Filter by category
     const category = payload.data?.category as NotificationCode | undefined;
     if (category) {
         const settings = await notificationStorage.getSettings();
         if (settings[category] === false) {
-            console.log(`[firebase-messaging-sw.js] Notification category "${category}" is disabled. Skipping.`);
+            logger.debug('Notification category disabled, skipping background notification', { category });
             return;
         }
     }
@@ -48,6 +50,10 @@ onBackgroundMessage(messaging, async (payload) => {
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
+    logger.info('Background notification shown', {
+        title: notificationTitle,
+        category: category ?? null
+    });
 });
 
 self.addEventListener('notificationclick', (event) => {

@@ -1,0 +1,156 @@
+import type pino from 'pino';
+import pinoFactory from 'pino';
+import { PinoLogger } from 'nestjs-pino';
+
+type LogLevel = 'fatal' | 'critical' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
+
+type LogDetails = unknown;
+
+const LEVEL_ORDER: Record<LogLevel, number> = {
+    fatal: 0,
+    critical: 1,
+    error: 2,
+    warn: 3,
+    info: 4,
+    debug: 5,
+    trace: 6
+};
+
+const DEFAULT_LEVEL = normalizeLevel(process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'info' : 'trace'));
+
+export class AppLogger {
+    private readonly logger: pino.Logger;
+
+    constructor(private readonly context: string, private readonly minimumLevel: LogLevel = DEFAULT_LEVEL) {
+        const rootLogger = (PinoLogger.root ?? pinoFactory({ level: DEFAULT_LEVEL })) as pino.Logger;
+        this.logger = rootLogger.child ? rootLogger.child({ context: this.context }) : rootLogger;
+    }
+
+    log(message: unknown, context?: string): void {
+        this.write('info', message, undefined, context);
+    }
+
+    error(message: unknown, trace?: string, context?: string): void {
+        this.write('error', message, trace, context);
+    }
+
+    warn(message: unknown, context?: string): void {
+        this.write('warn', message, undefined, context);
+    }
+
+    debug(message: unknown, context?: string): void {
+        this.write('debug', message, undefined, context);
+    }
+
+    verbose(message: unknown, context?: string): void {
+        this.write('trace', message, undefined, context);
+    }
+
+    info(message: unknown, details?: LogDetails, context?: string): void {
+        this.write('info', message, details, context);
+    }
+
+    trace(message: unknown, details?: LogDetails, context?: string): void {
+        this.write('trace', message, details, context);
+    }
+
+    critical(message: unknown, details?: LogDetails, context?: string): void {
+        this.write('critical', message, details, context);
+    }
+
+    fatal(message: unknown, details?: LogDetails, context?: string): void {
+        this.write('fatal', message, details, context);
+    }
+
+    private write(level: LogLevel, message: unknown, details?: LogDetails, contextOverride?: string): void {
+        if (!this.shouldLog(level)) {
+            return;
+        }
+
+        const payload = this.buildPayload(details, contextOverride);
+        this.getLevelLogger(level).call(this.logger, payload, this.stringify(message));
+    }
+
+    private shouldLog(level: LogLevel): boolean {
+        return LEVEL_ORDER[level] <= LEVEL_ORDER[this.minimumLevel];
+    }
+
+    private stringify(value: unknown): string {
+        if (typeof value === 'string') {
+            return value;
+        }
+
+        if (value instanceof Error) {
+            return `${value.name}: ${value.message}`;
+        }
+
+        try {
+            return JSON.stringify(value, this.replacer);
+        } catch {
+            return String(value);
+        }
+    }
+
+    private buildPayload(details: LogDetails, contextOverride?: string): Record<string, unknown> {
+        const context = contextOverride ?? this.context;
+        const base: Record<string, unknown> = { context };
+
+        if (details === undefined) {
+            return base;
+        }
+
+        if (details instanceof Error) {
+            return {
+                ...base,
+                err: details
+            };
+        }
+
+        if (typeof details === 'string') {
+            return {
+                ...base,
+                details
+            };
+        }
+
+        return {
+            ...base,
+            details
+        };
+    }
+
+    private getLevelLogger(level: LogLevel): (obj: Record<string, unknown> | string, msg?: string) => void {
+        const logger = this.logger as unknown as Record<string, (obj: Record<string, unknown> | string, msg?: string) => void>;
+
+        if (level === 'critical') {
+            return logger.critical ?? logger.error ?? logger.fatal;
+        }
+
+        return logger[level] ?? logger.info;
+    }
+
+    private replacer(_key: string, value: unknown): unknown {
+        if (value instanceof Error) {
+            return {
+                name: value.name,
+                message: value.message,
+                stack: value.stack
+            };
+        }
+
+        if (typeof value === 'bigint') {
+            return value.toString();
+        }
+
+        return value;
+    }
+}
+
+function normalizeLevel(level: string): LogLevel {
+    const normalized = level.toLowerCase();
+    if (normalized === 'fatal' || normalized === 'critical' || normalized === 'error' || normalized === 'warn' || normalized === 'info' || normalized === 'debug' || normalized === 'trace') {
+        return normalized;
+    }
+
+    return 'trace';
+}

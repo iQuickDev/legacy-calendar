@@ -4,6 +4,7 @@ import { EventsRepository } from '../events/events.repository.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { InviteStatus, ChatMediaType } from '../../prisma/generated/client.js';
 import * as path from 'path';
+import { AppLogger } from '../logging/app-logger.js';
 
 export type ChatMessagePayload = {
     id: number;
@@ -27,6 +28,8 @@ export type ChatEditedMessagePayload = ChatMessagePayload & {
 
 @Injectable()
 export class ChatService {
+    private readonly logger = new AppLogger(ChatService.name);
+
     constructor(
         @Inject(ChatRepository) private readonly chatRepo: ChatRepository,
         @Inject(EventsRepository) private readonly eventsRepo: EventsRepository,
@@ -34,8 +37,10 @@ export class ChatService {
     ) {}
 
     async isParticipant(eventId: number, userId: number): Promise<boolean> {
+        this.logger.trace('Checking chat participation', { eventId, userId });
         const event = await this.eventsRepo.findById(eventId);
         if (!event) {
+            this.logger.debug('Chat participation check failed: event not found', { eventId, userId });
             return false;
         }
 
@@ -55,8 +60,15 @@ export class ChatService {
         mediaType?: ChatMediaType | null,
         connectedUserIds: Set<number> = new Set()
     ): Promise<ChatMessagePayload> {
+        this.logger.info('Sending chat message', {
+            eventId,
+            userId,
+            hasText: Boolean(text?.trim()),
+            hasMedia: Boolean(mediaUrl)
+        });
         const isParticipant = await this.isParticipant(eventId, userId);
         if (!isParticipant) {
+            this.logger.warn('Chat message rejected: user is not a participant', { eventId, userId });
             throw new ForbiddenException('Not a participant');
         }
 
@@ -69,16 +81,20 @@ export class ChatService {
         });
 
         await this.sendPushNotification(message, connectedUserIds);
+        this.logger.info('Chat message sent', { eventId, messageId: message.id, userId });
         return this.toMessagePayload(message);
     }
 
     async getHistory(eventId: number, userId: number, cursor?: number, limit = 50) {
+        this.logger.debug('Fetching chat history', { eventId, userId, cursor, limit });
         const isParticipant = await this.isParticipant(eventId, userId);
         if (!isParticipant) {
+            this.logger.warn('Chat history rejected: user is not a participant', { eventId, userId });
             throw new ForbiddenException('Not a participant');
         }
 
         const { messages, hasMore } = await this.chatRepo.findMessagePage(eventId, limit, cursor);
+        this.logger.info('Chat history loaded', { eventId, userId, count: messages.length, hasMore });
 
         return {
             messages: messages.map((message) => this.toMessagePayload(message)),
@@ -87,12 +103,15 @@ export class ChatService {
     }
 
     async getPinnedMessages(eventId: number, userId: number): Promise<ChatMessagePayload[]> {
+        this.logger.debug('Fetching pinned chat messages', { eventId, userId });
         const isParticipant = await this.isParticipant(eventId, userId);
         if (!isParticipant) {
+            this.logger.warn('Pinned chat rejected: user is not a participant', { eventId, userId });
             throw new ForbiddenException('Not a participant');
         }
 
         const messages = await this.chatRepo.findPinnedMessages(eventId);
+        this.logger.info('Pinned chat messages loaded', { eventId, userId, count: messages.length });
         return messages.map((message) => this.toMessagePayload(message));
     }
 
@@ -106,6 +125,7 @@ export class ChatService {
         emoji: string,
         joinedEventId: number
     ): Promise<{ messageId: number; reactions: ReactionSummary[]; eventId: number }> {
+        this.logger.debug('Toggling chat reaction', { messageId, userId, emoji, joinedEventId });
         if (!emoji.trim()) {
             throw new BadRequestException('Emoji is required');
         }
@@ -116,15 +136,23 @@ export class ChatService {
         }
 
         if (message.eventId !== joinedEventId) {
+            this.logger.warn('Reaction rejected: message does not belong to joined event', {
+                messageId,
+                userId,
+                joinedEventId,
+                messageEventId: message.eventId
+            });
             throw new ForbiddenException('Message does not belong to the joined event');
         }
 
         const isParticipant = await this.isParticipant(message.eventId, userId);
         if (!isParticipant) {
+            this.logger.warn('Reaction rejected: user is not a participant', { messageId, userId });
             throw new ForbiddenException('Not a participant');
         }
 
         const reactions = await this.chatRepo.toggleReaction(messageId, userId, emoji.trim());
+        this.logger.info('Chat reaction updated', { messageId, userId, emoji: emoji.trim(), reactionCount: reactions.length });
         return {
             messageId,
             reactions,
@@ -133,6 +161,7 @@ export class ChatService {
     }
 
     async pinMessage(messageId: number, userId: number, isAdmin: boolean): Promise<ChatMessageWithRelations> {
+        this.logger.info('Pinning chat message', { messageId, userId, isAdmin });
         const message = await this.chatRepo.findMessageById(messageId);
         if (!message) {
             throw new NotFoundException('Message not found');
@@ -144,6 +173,7 @@ export class ChatService {
         }
 
         if (event.hostId !== userId && !isAdmin) {
+            this.logger.warn('Pin message rejected: not authorized', { messageId, userId, isAdmin, hostId: event.hostId });
             throw new ForbiddenException('Only host or admin can pin messages');
         }
 
@@ -151,6 +181,7 @@ export class ChatService {
     }
 
     async unpinMessage(messageId: number, userId: number, isAdmin: boolean): Promise<ChatMessageWithRelations> {
+        this.logger.info('Unpinning chat message', { messageId, userId, isAdmin });
         const message = await this.chatRepo.findMessageById(messageId);
         if (!message) {
             throw new NotFoundException('Message not found');
@@ -162,6 +193,7 @@ export class ChatService {
         }
 
         if (event.hostId !== userId && !isAdmin) {
+            this.logger.warn('Unpin message rejected: not authorized', { messageId, userId, isAdmin, hostId: event.hostId });
             throw new ForbiddenException('Only host or admin can unpin messages');
         }
 
@@ -169,6 +201,7 @@ export class ChatService {
     }
 
     async deleteMessage(messageId: number, userId: number, isAdmin: boolean): Promise<ChatMessageWithRelations> {
+        this.logger.warn('Deleting chat message', { messageId, userId, isAdmin });
         const message = await this.chatRepo.findMessageById(messageId);
         if (!message) {
             throw new NotFoundException('Message not found');
@@ -180,6 +213,13 @@ export class ChatService {
         }
 
         if (message.authorId !== userId && event.hostId !== userId && !isAdmin) {
+            this.logger.warn('Delete message rejected: not authorized', {
+                messageId,
+                userId,
+                isAdmin,
+                authorId: message.authorId,
+                hostId: event.hostId
+            });
             throw new ForbiddenException('Not authorized to delete this message');
         }
 
@@ -192,16 +232,19 @@ export class ChatService {
         }
 
         await this.chatRepo.deleteMessage(messageId);
+        this.logger.info('Chat message deleted', { messageId, userId, eventId: message.eventId });
         return message;
     }
 
     async editMessage(messageId: number, userId: number, text: string): Promise<ChatMessageWithRelations> {
+        this.logger.info('Editing chat message', { messageId, userId });
         const message = await this.chatRepo.findMessageById(messageId);
         if (!message) {
             throw new NotFoundException('Message not found');
         }
 
         if (message.authorId !== userId) {
+            this.logger.warn('Edit message rejected: user is not the author', { messageId, userId, authorId: message.authorId });
             throw new ForbiddenException('Only author can edit message');
         }
 
@@ -214,6 +257,7 @@ export class ChatService {
             throw new BadRequestException('Message text is too long');
         }
 
+        this.logger.debug('Chat message validated for edit', { messageId, userId, length: nextText.length });
         return this.chatRepo.updateMessage(messageId, {
             text: nextText,
             isEdited: true
@@ -221,8 +265,14 @@ export class ChatService {
     }
 
     async sendPushNotification(message: ChatMessageWithRelations, connectedUserIds: Set<number>): Promise<void> {
+        this.logger.debug('Preparing chat push notification', {
+            messageId: message.id,
+            eventId: message.eventId,
+            connectedUserCount: connectedUserIds.size
+        });
         const event = await this.eventsRepo.findById(message.eventId);
         if (!event) {
+            this.logger.warn('Skipping chat push notification: event not found', { eventId: message.eventId, messageId: message.id });
             return;
         }
 
@@ -237,11 +287,16 @@ export class ChatService {
         );
 
         if (offlineParticipantIds.length === 0) {
+            this.logger.trace('Skipping chat push notification: all participants are online', { messageId: message.id });
             return;
         }
 
         const tokens = await this.eventsRepo.getUserTokens(offlineParticipantIds);
         if (tokens.length === 0) {
+            this.logger.trace('Skipping chat push notification: no device tokens found', {
+                messageId: message.id,
+                offlineParticipantCount: offlineParticipantIds.length
+            });
             return;
         }
 
@@ -256,6 +311,11 @@ export class ChatService {
             type: 'CHAT_NEW_MESSAGE',
             eventId: String(message.eventId),
             messageId: String(message.id)
+        });
+        this.logger.info('Chat push notification sent', {
+            messageId: message.id,
+            eventId: message.eventId,
+            recipientCount: tokens.length
         });
     }
 

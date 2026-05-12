@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
+import { createLogger } from './logger';
 
 export const baseURL = import.meta.env.VITE_API_URL;
 export const uploadsBaseURL = import.meta.env.VITE_UPLOADS_URL || baseURL;
@@ -12,6 +13,8 @@ import type { CreateEventDto, Event, ParticipateDto } from '../types/Event';
 import type { ChatHistoryResponse, ChatMediaUploadResponse } from '../types/Chat';
 
 // --- API Class ---
+
+const logger = createLogger('API');
 
 class API {
     private client: AxiosInstance;
@@ -39,16 +42,38 @@ class API {
                     config.headers['X-Impersonate'] = impersonateUserId;
                 }
 
+                logger.debug('Sending request', {
+                    method: config.method?.toUpperCase() ?? 'GET',
+                    url: config.baseURL ? `${config.baseURL}${config.url ?? ''}` : config.url,
+                    hasToken: Boolean(token),
+                    impersonating: Boolean(impersonateUserId)
+                });
+
                 return config;
             },
             (error) => {
+                logger.error('Failed to prepare request', error);
                 return Promise.reject(error);
             }
         );
 
         this.client.interceptors.response.use(
-            (response) => response,
+            (response) => {
+                logger.info('Received response', {
+                    method: response.config.method?.toUpperCase() ?? 'GET',
+                    url: response.config.url,
+                    status: response.status
+                });
+                return response;
+            },
             (error) => {
+                logger.warn('Request failed', {
+                    method: error?.config?.method?.toUpperCase() ?? 'UNKNOWN',
+                    url: error?.config?.url,
+                    status: error?.response?.status,
+                    message: error?.response?.data?.message ?? error.message
+                });
+
                 if (error.response && error.response.status === 401) {
                     // Session is invalid or expired
                     localStorage.removeItem('token');

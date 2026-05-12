@@ -15,10 +15,12 @@ import { onMounted } from 'vue';
 import { notificationStorage } from '../services/notificationStorage';
 import { NotificationLabel, type NotificationSettings } from '../types/Notification';
 import { router } from '../router/router';
+import { createLogger } from '../services/logger';
 
 const sessionStore = useSessionStore();
 const toast = useToast();
 const confirm = useConfirm();
+const logger = createLogger('ProfileView');
 
 const currentUser = computed(() => sessionStore.currentUser);
 const isAdmin = computed(() => currentUser.value?.isAdmin);
@@ -46,7 +48,7 @@ const handleToggleSetting = async () => {
         try {
             await notificationStorage.saveSettings(toRaw(notificationSettings.value));
         } catch (error) {
-            console.error(error);
+            logger.error('Failed to save notification settings', error);
             toast.add({
                 severity: 'error',
                 summary: 'Error',
@@ -154,7 +156,7 @@ const handleClearCache = () => {
                     life: 3000
                 });
             } catch (error) {
-                console.error('Failed to clear IndexedDB cache:', error);
+                logger.error('Failed to clear IndexedDB cache', error);
                 toast.add({
                     severity: 'error',
                     summary: 'Error',

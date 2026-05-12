@@ -1,8 +1,10 @@
 import { NotificationCode, type NotificationSettings } from '../types/Notification';
+import { createLogger } from './logger';
 
 const DB_NAME = 'notification-settings-db';
 const STORE_NAME = 'settings';
 const DB_VERSION = 1;
+const logger = createLogger('NotificationStorage');
 
 /**
  * Simple IndexedDB wrapper for notification settings.
@@ -46,7 +48,7 @@ export const notificationStorage = {
                 request.onerror = () => resolve(defaultSettings);
             });
         } catch (error) {
-            console.warn('Failed to open IndexedDB for notification settings, using defaults.', error);
+            logger.warn('Failed to open IndexedDB for notification settings, using defaults', error);
             return defaultSettings;
         }
     },
@@ -62,7 +64,7 @@ export const notificationStorage = {
                 request.onerror = () => reject(request.error);
             });
         } catch (error) {
-            console.error('Failed to save notification settings to IndexedDB', error);
+            logger.error('Failed to save notification settings to IndexedDB', error);
             throw error;
         }
     }

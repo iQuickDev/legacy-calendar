@@ -22,6 +22,7 @@ import { randomUUID } from 'crypto';
 import * as path from 'path';
 import { mkdirSync } from 'fs';
 import { ChatMediaType } from '../../prisma/generated/client.js';
+import { AppLogger } from '../logging/app-logger.js';
 
 type RequestWithUser = {
     user: {
@@ -32,6 +33,8 @@ type RequestWithUser = {
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
 export class ChatController {
+    private readonly logger = new AppLogger(ChatController.name);
+
     constructor(
         @Inject(ChatService) private readonly chatService: ChatService,
         @Inject(MediaProcessorService) private readonly mediaProcessor: MediaProcessorService
@@ -47,6 +50,7 @@ export class ChatController {
         const userId = req?.user.userId as number;
         const parsedLimit = this.parseLimit(limit);
         const parsedCursor = this.parseCursor(cursor);
+        this.logger.debug('Loading chat history', { eventId, userId, cursor: parsedCursor, limit: parsedLimit });
 
         return this.chatService.getHistory(eventId, userId, parsedCursor, parsedLimit);
     }
@@ -54,6 +58,7 @@ export class ChatController {
     @Get(':eventId/pinned')
     async getPinned(@Param('eventId', ParseIntPipe) eventId: number, @Req() req?: RequestWithUser) {
         const userId = req?.user.userId as number;
+        this.logger.debug('Loading pinned chat messages', { eventId, userId });
         return this.chatService.getPinnedMessages(eventId, userId);
     }
 
@@ -65,6 +70,12 @@ export class ChatController {
         @Req() req?: RequestWithUser
     ) {
         const userId = req?.user.userId as number;
+        this.logger.info('Uploading chat media', {
+            eventId,
+            userId,
+            fileName: file?.originalname,
+            size: file?.size
+        });
         const isParticipant = await this.chatService.isParticipant(eventId, userId);
         if (!isParticipant) {
             throw new ForbiddenException('Not a participant');
