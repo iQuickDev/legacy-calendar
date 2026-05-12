@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { Prisma, Event, InviteStatus } from '../../prisma/generated/client.js';
+import { Prisma, Event, InviteStatus, TransportMode } from '../../prisma/generated/client.js';
 import { ParticipateDto } from './dto/participate.dto.js';
 
 export const EVENT_INCLUDE = {
@@ -88,7 +88,8 @@ export class EventsRepository {
     }
 
     async join(userId: number, eventId: number, participateDto: ParticipateDto) {
-        const { wantsFood, wantsWeed, wantsSleep, wantsAlcohol, wantsBeer, hasVehicle, vehicleSeats } = participateDto;
+        const { wantsFood, wantsWeed, wantsSleep, wantsAlcohol, wantsBeer, transportMode, vehicleSeats } =
+            participateDto;
 
         return this.prisma.attendance.upsert({
             where: {
@@ -101,7 +102,7 @@ export class EventsRepository {
                 wantsSleep,
                 wantsAlcohol,
                 wantsBeer,
-                hasVehicle,
+                transportMode,
                 vehicleSeats
             },
             create: {
@@ -113,7 +114,7 @@ export class EventsRepository {
                 wantsSleep,
                 wantsAlcohol,
                 wantsBeer,
-                hasVehicle,
+                transportMode,
                 vehicleSeats
             }
         });
@@ -164,7 +165,7 @@ export class EventsRepository {
             },
             data: {
                 status: InviteStatus.DECLINED,
-                hasVehicle: false,
+                transportMode: TransportMode.NEEDS_RIDE,
                 vehicleSeats: 0,
                 wantsFood: false,
                 wantsWeed: false,

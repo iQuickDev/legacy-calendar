@@ -2,12 +2,12 @@
 import { ref, watch } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
-import ToggleSwitch from 'primevue/toggleswitch';
 import Slider from 'primevue/slider';
 import Divider from 'primevue/divider';
-import { type EventFeature } from '../../types/Event';
+import { type EventFeature, type TransportMode } from '../../types/Event';
 
 import { FEATURES } from '../../constants/features';
+import { TRANSPORT_OPTIONS } from '../../constants/transport';
 import { toggleFeature as toggleFeatureInSelection } from '../../utils/event';
 
 const props = defineProps<{
@@ -17,18 +17,21 @@ const props = defineProps<{
     submitLabel?: string;
     featurePrices?: Record<EventFeature, number | null>;
     featureSplitPrices?: Record<EventFeature, number | null>;
-    initialHasVehicle?: boolean;
+    initialTransportMode?: TransportMode;
     initialVehicleSeats?: number;
 }>();
 
 const emit = defineEmits<{
     (e: 'update:visible', value: boolean): void;
-    (e: 'confirm', data: { features: EventFeature[]; vehicle: { hasVehicle: boolean; vehicleSeats?: number } }): void;
+    (
+        e: 'confirm',
+        data: { features: EventFeature[]; transport: { transportMode: TransportMode; vehicleSeats?: number } }
+    ): void;
 }>();
 
 const selectedFeatures = ref<EventFeature[]>([]);
-const hasVehicle = ref(false);
-const vehicleSeats = ref(5);
+const transportMode = ref<TransportMode>('NEEDS_RIDE');
+const vehicleSeats = ref(4);
 
 const isFeatureAvailable = (id: EventFeature) => {
     // If availableFeatures is undefined, show all (backward compatibility)
@@ -42,12 +45,16 @@ const toggleFeature = (feature: EventFeature) => {
     toggleFeatureInSelection(selectedFeatures.value, feature);
 };
 
+const selectTransportMode = (mode: TransportMode) => {
+    transportMode.value = mode;
+};
+
 const onConfirm = () => {
     emit('confirm', {
         features: selectedFeatures.value,
-        vehicle: {
-            hasVehicle: hasVehicle.value,
-            vehicleSeats: hasVehicle.value ? vehicleSeats.value : undefined
+        transport: {
+            transportMode: transportMode.value,
+            vehicleSeats: transportMode.value === 'DRIVER' ? vehicleSeats.value : undefined
         }
     });
 };
@@ -57,8 +64,8 @@ watch(
     (newVal) => {
         if (newVal) {
             selectedFeatures.value = props.initialFeatures ? [...props.initialFeatures] : [];
-            hasVehicle.value = props.initialHasVehicle ?? false;
-            vehicleSeats.value = props.initialVehicleSeats ?? 0;
+            transportMode.value = props.initialTransportMode ?? 'NEEDS_RIDE';
+            vehicleSeats.value = props.initialVehicleSeats ?? 4;
         }
     }
 );
@@ -76,7 +83,7 @@ watch(
         dismissableMask
         :draggable="false"
     >
-        <div class="flex flex-col gap-6 py-4">
+        <div class="flex flex-col gap-2 py-4">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <button
                     v-for="feature in FEATURES"
@@ -127,20 +134,44 @@ watch(
             <Divider />
 
             <div class="flex flex-col gap-4">
-                <div class="flex items-center justify-between px-2">
-                    <div class="flex flex-col items-start">
-                        <span class="text-sm font-bold tracking-wider text-zinc-400 uppercase">Transport</span>
-                        <span class="text-xs text-zinc-500">Do you have a vehicle?</span>
-                    </div>
-                    <ToggleSwitch v-model="hasVehicle" />
+                <span class="text-sm font-bold tracking-wider text-zinc-400 uppercase">Transport</span>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <button
+                        v-for="option in TRANSPORT_OPTIONS"
+                        :key="option.id"
+                        @click="selectTransportMode(option.id)"
+                        class="group relative flex cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border p-4 transition-all duration-300 hover:scale-[1.02] focus:outline-none"
+                        :class="[
+                            transportMode === option.id
+                                ? `${option.color} border-transparent shadow-lg ring-2 ring-current ring-offset-2 ring-offset-white dark:ring-offset-zinc-950`
+                                : 'border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900'
+                        ]"
+                    >
+                        <span class="text-3xl transition-transform duration-300 group-hover:scale-110">{{
+                            option.icon
+                        }}</span>
+
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-bold tracking-wider uppercase">{{ option.label }}</span>
+                        </div>
+
+                        <!-- Selected Indicator -->
+                        <div v-if="transportMode === option.id" class="absolute top-2 right-2">
+                            <i class="pi pi-check-circle text-xs"></i>
+                        </div>
+                    </button>
                 </div>
 
-                <div v-if="hasVehicle" class="animate-in fade-in slide-in-from-top-2 flex flex-col gap-4 duration-300">
+                <div
+                    v-if="transportMode === 'DRIVER'"
+                    class="animate-in fade-in slide-in-from-top-2 flex flex-col gap-4 duration-300"
+                >
                     <div class="flex flex-col items-start gap-2 px-2">
                         <span class="text-xs font-bold tracking-wider text-zinc-400 uppercase">Total Seats</span>
                         <span class="text-xs text-zinc-500">Including yourself</span>
                         <div class="flex w-full items-center gap-4">
-                            <Slider v-model="vehicleSeats" :min="1" :max="9" class="flex-1" />
+                            <Slider v-model="vehicleSeats" :min="2" :max="9" class="flex-1" />
                             <span class="w-8 text-xl font-black text-emerald-500">{{ vehicleSeats }}</span>
                         </div>
                     </div>

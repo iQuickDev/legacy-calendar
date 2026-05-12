@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, Max, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, Max, Min } from 'class-validator';
+import { TransportMode } from '../../../prisma/generated/client.js';
 
 export class ParticipateDto {
     @ApiProperty({ type: Boolean, example: true, description: 'Whether the user wants food', required: false })
@@ -27,14 +28,19 @@ export class ParticipateDto {
     @IsBoolean()
     wantsBeer?: boolean;
 
-    @ApiProperty({ type: Boolean, example: true, description: 'Whether the user has a vehicle', required: false })
+    @ApiProperty({
+        enum: TransportMode,
+        example: 'NEEDS_RIDE',
+        description: 'Transport mode: NEEDS_RIDE, SELF, or DRIVER',
+        required: false
+    })
     @IsOptional()
-    @IsBoolean()
-    hasVehicle?: boolean;
+    @IsEnum(TransportMode)
+    transportMode?: TransportMode;
 
-    @ApiProperty({ type: Number, example: 4, description: 'Number of total seats', required: false })
+    @ApiProperty({ type: Number, example: 4, description: 'Number of total seats (for DRIVER mode)', required: false })
     @IsOptional()
-    @Min(1)
+    @Min(2)
     @Max(9)
     vehicleSeats?: number;
 }

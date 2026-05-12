@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { UserDto } from '../../users/dto/user.dto.js';
-import { InviteStatus } from '../../../prisma/generated/client.js';
+import { InviteStatus, TransportMode } from '../../../prisma/generated/client.js';
 
 export class EventParticipantDto extends UserDto {
     @ApiProperty({ enum: InviteStatus, example: 'PENDING', description: 'Status of the invitation' })
@@ -21,8 +21,8 @@ export class EventParticipantDto extends UserDto {
     @ApiProperty({ type: Boolean, example: true, description: 'User wants beer' })
     wantsBeer?: boolean;
 
-    @ApiProperty({ type: Boolean, example: true, description: 'User has a vehicle' })
-    hasVehicle?: boolean;
+    @ApiProperty({ enum: TransportMode, example: 'NEEDS_RIDE', description: 'Transport mode' })
+    transportMode?: TransportMode;
 
     @ApiProperty({ type: Number, example: 4, description: 'Number of available seats' })
     vehicleSeats?: number;

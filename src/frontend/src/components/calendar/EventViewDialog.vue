@@ -5,7 +5,7 @@ import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 
-import type { Event, EventFeature } from '../../types/Event';
+import type { Event, EventFeature, TransportMode } from '../../types/Event';
 import { useEventsStore } from '../../stores/events';
 import EventViewMode from './event-view/EventViewMode.vue';
 import { useEventView, EventViewInjectionKey } from '../../composables/useEventView';
@@ -108,7 +108,7 @@ const onDecline = () => onLeaveEvent(true);
 
 const handleFeatureConfirm = async (data: {
     features: EventFeature[];
-    vehicle: { hasVehicle: boolean; vehicleSeats?: number };
+    transport: { transportMode: TransportMode; vehicleSeats?: number };
 }) => {
     showFeatureSelection.value = false;
     if (!props.event || !currentUser.value) return;
@@ -117,8 +117,8 @@ const handleFeatureConfirm = async (data: {
     try {
         const participateDto: ParticipateDto = {
             ...participantWantsFromSelection(data.features),
-            hasVehicle: data.vehicle.hasVehicle,
-            vehicleSeats: data.vehicle.vehicleSeats
+            transportMode: data.transport.transportMode,
+            vehicleSeats: data.transport.vehicleSeats
         };
 
         const success = await eventsStore.joinEvent(props.event.id, participateDto);
@@ -337,7 +337,7 @@ watch(
         v-model:visible="showFeatureSelection"
         :availableFeatures="availableFeatureIds"
         :initialFeatures="currentUser ? getParticipantFeatures(currentUser.id) : []"
-        :initialHasVehicle="props.event?.participants?.find((p) => p.id === currentUser?.id)?.hasVehicle"
+        :initialTransportMode="props.event?.participants?.find((p) => p.id === currentUser?.id)?.transportMode"
         :initialVehicleSeats="props.event?.participants?.find((p) => p.id === currentUser?.id)?.vehicleSeats"
         :submitLabel="userParticipantStatus === 'ACCEPTED' ? 'Save Changes' : 'Join Event'"
         :featurePrices="eventPrices"

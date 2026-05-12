@@ -175,7 +175,7 @@ export function useEventView(eventRef: Ref<Event | null>) {
     const drivers = computed(() => {
         if (!eventRef.value?.participants) return [];
         return resolvedInvitees.value
-            .filter((participant) => participant.status === 'ACCEPTED' && participant.hasVehicle)
+            .filter((participant) => participant.status === 'ACCEPTED' && participant.transportMode === 'DRIVER')
             .sort((a, b) => a.username.localeCompare(b.username));
     });
 
@@ -183,7 +183,10 @@ export function useEventView(eventRef: Ref<Event | null>) {
         if (!eventRef.value?.participants) return [];
         return resolvedInvitees.value
             .filter(
-                (participant) => participant.status === 'ACCEPTED' && !participant.hasVehicle && !participant.driverId
+                (participant) =>
+                    participant.status === 'ACCEPTED' &&
+                    participant.transportMode === 'NEEDS_RIDE' &&
+                    !participant.driverId
             )
             .sort((a, b) => a.username.localeCompare(b.username));
     });

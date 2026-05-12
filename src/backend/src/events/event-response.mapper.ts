@@ -27,7 +27,7 @@ export function mapEventToDto(event: EventWithRelations): EventResponseDto {
             wantsSleep: attendance.wantsSleep,
             wantsAlcohol: attendance.wantsAlcohol,
             wantsBeer: attendance.wantsBeer,
-            hasVehicle: attendance.hasVehicle,
+            transportMode: attendance.transportMode,
             vehicleSeats: attendance.vehicleSeats,
             driverId: rideAssignment?.driverId,
             driver: rideAssignment?.driver ? mapUserDto(rideAssignment.driver) : undefined

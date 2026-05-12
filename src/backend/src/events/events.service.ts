@@ -294,7 +294,7 @@ export class EventsService {
                 throw new NotFoundException(`Driver with id ${driverId} is not in this event`);
             }
 
-            if (!driver.hasVehicle) {
+            if (driver.transportMode !== 'DRIVER') {
                 throw new ForbiddenException('Selected driver does not have a vehicle for this event');
             }
         }

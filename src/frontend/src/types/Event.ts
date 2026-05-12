@@ -27,6 +27,9 @@ export type EventFeature = (typeof EVENT_FEATURES)[number];
 export const PARTICIPANT_STATUSES = ['ACCEPTED', 'DECLINED', 'PENDING'] as const;
 export type ParticipantStatus = (typeof PARTICIPANT_STATUSES)[number];
 
+export const TRANSPORT_MODES = ['NEEDS_RIDE', 'SELF', 'DRIVER'] as const;
+export type TransportMode = (typeof TRANSPORT_MODES)[number];
+
 export interface EventPersonSummary {
     id: number;
     username: string;
@@ -40,8 +43,7 @@ export interface EventParticipant extends EventPersonSummary {
     wantsSleep?: boolean;
     wantsAlcohol?: boolean;
     wantsBeer?: boolean;
-    hasVehicle?: boolean;
-    vehicleType?: string;
+    transportMode?: TransportMode;
     vehicleSeats?: number;
     driverId?: number;
     driver?: EventPersonSummary;
@@ -79,7 +81,6 @@ export interface ParticipateDto {
     wantsSleep?: boolean;
     wantsAlcohol?: boolean;
     wantsBeer?: boolean;
-    hasVehicle?: boolean;
-    vehicleType?: string;
+    transportMode?: TransportMode;
     vehicleSeats?: number;
 }

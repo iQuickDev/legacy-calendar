@@ -61,17 +61,17 @@ model Event {
 }
 
 model Attendance {
-  id           Int          @id @default(autoincrement())
-  userId       Int
-  eventId      Int
-  status       InviteStatus @default(PENDING)
-  wantsAlcohol Boolean      @default(false)
-  wantsFood    Boolean      @default(false)
-  wantsSleep   Boolean      @default(false)
-  wantsWeed    Boolean      @default(false)
-  wantsBeer    Boolean      @default(false)
-  hasVehicle   Boolean      @default(false)
-  vehicleSeats Int          @default(0)
+  id            Int           @id @default(autoincrement())
+  userId        Int
+  eventId       Int
+  status        InviteStatus  @default(PENDING)
+  wantsAlcohol  Boolean       @default(false)
+  wantsFood     Boolean       @default(false)
+  wantsSleep    Boolean       @default(false)
+  wantsWeed     Boolean       @default(false)
+  wantsBeer     Boolean       @default(false)
+  transportMode TransportMode @default(NEEDS_RIDE)
+  vehicleSeats  Int           @default(0)
   event        Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id])
 
@@ -95,6 +95,12 @@ enum InviteStatus {
   PENDING
   ACCEPTED
   DECLINED
+}
+
+enum TransportMode {
+  NEEDS_RIDE
+  SELF
+  DRIVER
 }
 
 enum ChatMediaType {
