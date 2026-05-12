@@ -122,9 +122,12 @@ model ChatMessage {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  event   Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  author  User           @relation(fields: [authorId], references: [id])
+  event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  author    User           @relation(fields: [authorId], references: [id])
   reactions ChatReaction[]
+
+  @@index([eventId, createdAt])
+  @@index([eventId, isPinned, createdAt])
 }
 
 model ChatReaction {
