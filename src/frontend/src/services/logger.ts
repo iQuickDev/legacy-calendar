@@ -12,15 +12,7 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
     trace: 6
 };
 
-const DEFAULT_LEVEL = normalizeLevel(
-    import.meta.env.VITE_LOG_LEVEL ?? (import.meta.env.DEV ? 'trace' : 'info')
-);
-
-export function createLogger(scope: string) {
-    return new FrontendLogger(scope, DEFAULT_LEVEL);
-}
-
-export const logger = createLogger('App');
+const DEFAULT_LEVEL = normalizeLevel(import.meta.env.VITE_LOG_LEVEL ?? (import.meta.env.DEV ? 'trace' : 'info'));
 
 class FrontendLogger {
     private readonly scope: string;
@@ -143,6 +135,12 @@ class FrontendLogger {
         return value;
     }
 }
+
+export function createLogger(scope: string) {
+    return new FrontendLogger(scope, DEFAULT_LEVEL);
+}
+
+export const logger = createLogger('App');
 
 function normalizeLevel(level: string): LogLevel {
     const normalized = level.toLowerCase();
