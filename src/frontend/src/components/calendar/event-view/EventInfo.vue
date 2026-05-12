@@ -88,9 +88,9 @@ watch(
         <!-- Map Preview at the top -->
         <EventMapPreview
             v-if="coords"
+            :location="event.location"
             :lat="coords.lat"
             :lon="coords.lon"
-            :color="event.color"
             @open-map="mapDialogVisible = true"
         />
 
@@ -172,7 +172,6 @@ watch(
             v-model:visible="mapDialogVisible"
             :lat="coords?.lat ?? 0"
             :lon="coords?.lon ?? 0"
-            :color="event.color"
             :location="event.location"
         />
 
