@@ -37,7 +37,10 @@ export class ImpersonateInterceptor implements NestInterceptor {
                             this.logger.warn('Impersonation failed: user not found', { userId });
                         }
                     } catch (error) {
-                        this.logger.error('Error during impersonation', error instanceof Error ? error.stack ?? error.message : String(error));
+                        this.logger.error(
+                            'Error during impersonation',
+                            error instanceof Error ? (error.stack ?? error.message) : String(error)
+                        );
                         // If user not found, just continue as the original user
                     }
                 }

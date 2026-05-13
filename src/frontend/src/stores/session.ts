@@ -35,7 +35,10 @@ export const useSessionStore = defineStore('session', () => {
             // Fetch user profile
             const profileResponse = await api.getProfile();
             session.value.user = profileResponse.data;
-            logger.info('Login completed', { userId: profileResponse.data.id, username: profileResponse.data.username });
+            logger.info('Login completed', {
+                userId: profileResponse.data.id,
+                username: profileResponse.data.username
+            });
 
             return true;
         } catch (err: any) {

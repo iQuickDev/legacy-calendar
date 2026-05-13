@@ -152,7 +152,12 @@ export class ChatService {
         }
 
         const reactions = await this.chatRepo.toggleReaction(messageId, userId, emoji.trim());
-        this.logger.info('Chat reaction updated', { messageId, userId, emoji: emoji.trim(), reactionCount: reactions.length });
+        this.logger.info('Chat reaction updated', {
+            messageId,
+            userId,
+            emoji: emoji.trim(),
+            reactionCount: reactions.length
+        });
         return {
             messageId,
             reactions,
@@ -173,7 +178,12 @@ export class ChatService {
         }
 
         if (event.hostId !== userId && !isAdmin) {
-            this.logger.warn('Pin message rejected: not authorized', { messageId, userId, isAdmin, hostId: event.hostId });
+            this.logger.warn('Pin message rejected: not authorized', {
+                messageId,
+                userId,
+                isAdmin,
+                hostId: event.hostId
+            });
             throw new ForbiddenException('Only host or admin can pin messages');
         }
 
@@ -193,7 +203,12 @@ export class ChatService {
         }
 
         if (event.hostId !== userId && !isAdmin) {
-            this.logger.warn('Unpin message rejected: not authorized', { messageId, userId, isAdmin, hostId: event.hostId });
+            this.logger.warn('Unpin message rejected: not authorized', {
+                messageId,
+                userId,
+                isAdmin,
+                hostId: event.hostId
+            });
             throw new ForbiddenException('Only host or admin can unpin messages');
         }
 
@@ -244,7 +259,11 @@ export class ChatService {
         }
 
         if (message.authorId !== userId) {
-            this.logger.warn('Edit message rejected: user is not the author', { messageId, userId, authorId: message.authorId });
+            this.logger.warn('Edit message rejected: user is not the author', {
+                messageId,
+                userId,
+                authorId: message.authorId
+            });
             throw new ForbiddenException('Only author can edit message');
         }
 
@@ -272,7 +291,10 @@ export class ChatService {
         });
         const event = await this.eventsRepo.findById(message.eventId);
         if (!event) {
-            this.logger.warn('Skipping chat push notification: event not found', { eventId: message.eventId, messageId: message.id });
+            this.logger.warn('Skipping chat push notification: event not found', {
+                eventId: message.eventId,
+                messageId: message.id
+            });
             return;
         }
 
@@ -287,7 +309,9 @@ export class ChatService {
         );
 
         if (offlineParticipantIds.length === 0) {
-            this.logger.trace('Skipping chat push notification: all participants are online', { messageId: message.id });
+            this.logger.trace('Skipping chat push notification: all participants are online', {
+                messageId: message.id
+            });
             return;
         }
 

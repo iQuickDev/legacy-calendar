@@ -1,10 +1,4 @@
-import {
-    CallHandler,
-    ExecutionContext,
-    Injectable,
-    NestInterceptor,
-    HttpException
-} from '@nestjs/common';
+import { CallHandler, ExecutionContext, Injectable, NestInterceptor, HttpException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Observable, catchError, tap, throwError } from 'rxjs';
 import { AppLogger } from './app-logger.js';
@@ -14,7 +8,9 @@ export class HttpRequestLoggingInterceptor implements NestInterceptor {
     private readonly logger = new AppLogger('HTTP');
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-        const request = context.switchToHttp().getRequest<Request & { user?: { userId?: number; username?: string } }>();
+        const request = context
+            .switchToHttp()
+            .getRequest<Request & { user?: { userId?: number; username?: string } }>();
         const response = context.switchToHttp().getResponse<Response>();
         const requestId = this.resolveRequestId(request);
         const startedAt = Date.now();

@@ -338,7 +338,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
             }
 
             (socket.data as { user?: SocketUser }).user = user;
-            this.logger.debug('Socket authenticated', { socketId: socket.id, userId: user.userId, username: user.username });
+            this.logger.debug('Socket authenticated', {
+                socketId: socket.id,
+                userId: user.userId,
+                username: user.username
+            });
             next();
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);

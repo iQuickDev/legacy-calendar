@@ -69,7 +69,10 @@ export class EventsService {
                     `User in host or participants not found. IDs: host=${hostId}, participants=[${participantIds.join(', ')}]`
                 );
             }
-            this.logger.error('Failed to create event', error instanceof Error ? error.stack ?? error.message : String(error));
+            this.logger.error(
+                'Failed to create event',
+                error instanceof Error ? (error.stack ?? error.message) : String(error)
+            );
             throw error;
         }
     }
@@ -220,7 +223,11 @@ export class EventsService {
             );
         }
 
-        this.logger.info('Invitation processed', { eventId, invitedUsername: username, invitedUserId: invitedUser?.id ?? null });
+        this.logger.info('Invitation processed', {
+            eventId,
+            invitedUsername: username,
+            invitedUserId: invitedUser?.id ?? null
+        });
         return { message: 'User invited' };
     }
 
@@ -306,7 +313,10 @@ export class EventsService {
                 this.logger.warn('Leave rejected: participation not found', { eventId, userId });
                 throw new NotFoundException('Participation not found');
             }
-            this.logger.error('Failed to leave event', error instanceof Error ? error.stack ?? error.message : String(error));
+            this.logger.error(
+                'Failed to leave event',
+                error instanceof Error ? (error.stack ?? error.message) : String(error)
+            );
             throw error;
         }
     }

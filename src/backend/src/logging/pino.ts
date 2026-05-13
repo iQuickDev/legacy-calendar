@@ -4,7 +4,9 @@ import type { Params } from 'nestjs-pino';
 
 type LogLevel = 'fatal' | 'critical' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
 
-const DEFAULT_LEVEL = normalizeLevel(process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'info' : 'trace'));
+const DEFAULT_LEVEL = normalizeLevel(
+    process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'info' : 'trace')
+);
 
 export function createRootLogger(): Logger {
     const options: LoggerOptions = {
@@ -64,7 +66,15 @@ export function createLoggerModuleParams(): Params {
 
 function normalizeLevel(level: string): LogLevel {
     const normalized = level.toLowerCase();
-    if (normalized === 'fatal' || normalized === 'critical' || normalized === 'error' || normalized === 'warn' || normalized === 'info' || normalized === 'debug' || normalized === 'trace') {
+    if (
+        normalized === 'fatal' ||
+        normalized === 'critical' ||
+        normalized === 'error' ||
+        normalized === 'warn' ||
+        normalized === 'info' ||
+        normalized === 'debug' ||
+        normalized === 'trace'
+    ) {
         return normalized;
     }
 

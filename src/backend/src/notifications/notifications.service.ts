@@ -26,10 +26,15 @@ export class NotificationsService implements OnModuleInit {
                 this.initialized = true;
                 this.logger.info('Firebase Admin initialized successfully using firebase.json');
             } catch (error) {
-                this.logger.fatal('Failed to initialize Firebase Admin with firebase.json', error instanceof Error ? error : String(error));
+                this.logger.fatal(
+                    'Failed to initialize Firebase Admin with firebase.json',
+                    error instanceof Error ? error : String(error)
+                );
             }
         } else {
-            this.logger.warn('Firebase credentials file (firebase.json) not found at root. Notifications will not be sent.');
+            this.logger.warn(
+                'Firebase credentials file (firebase.json) not found at root. Notifications will not be sent.'
+            );
         }
     }
 
@@ -73,7 +78,10 @@ export class NotificationsService implements OnModuleInit {
             });
             this.logger.info('Notification sent', { token, title, dataKeys: data ? Object.keys(data) : [] });
         } catch (error) {
-            this.logger.error('Failed to send notification', error instanceof Error ? error.stack ?? error.message : String(error));
+            this.logger.error(
+                'Failed to send notification',
+                error instanceof Error ? (error.stack ?? error.message) : String(error)
+            );
         }
     }
 
@@ -102,7 +110,10 @@ export class NotificationsService implements OnModuleInit {
                 title
             });
         } catch (error) {
-            this.logger.error('Failed to send multicast notifications', error instanceof Error ? error.stack ?? error.message : String(error));
+            this.logger.error(
+                'Failed to send multicast notifications',
+                error instanceof Error ? (error.stack ?? error.message) : String(error)
+            );
         }
     }
 }

@@ -16,12 +16,17 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
     trace: 6
 };
 
-const DEFAULT_LEVEL = normalizeLevel(process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'info' : 'trace'));
+const DEFAULT_LEVEL = normalizeLevel(
+    process.env.LOG_LEVEL ?? (process.env.NODE_ENV === 'production' ? 'info' : 'trace')
+);
 
 export class AppLogger {
     private readonly logger: pino.Logger;
 
-    constructor(private readonly context: string, private readonly minimumLevel: LogLevel = DEFAULT_LEVEL) {
+    constructor(
+        private readonly context: string,
+        private readonly minimumLevel: LogLevel = DEFAULT_LEVEL
+    ) {
         const rootLogger = (PinoLogger.root ?? pinoFactory({ level: DEFAULT_LEVEL })) as pino.Logger;
         this.logger = rootLogger.child ? rootLogger.child({ context: this.context }) : rootLogger;
     }
@@ -120,7 +125,10 @@ export class AppLogger {
     }
 
     private getLevelLogger(level: LogLevel): (obj: Record<string, unknown> | string, msg?: string) => void {
-        const logger = this.logger as unknown as Record<string, (obj: Record<string, unknown> | string, msg?: string) => void>;
+        const logger = this.logger as unknown as Record<
+            string,
+            (obj: Record<string, unknown> | string, msg?: string) => void
+        >;
 
         if (level === 'critical') {
             return logger.critical ?? logger.error ?? logger.fatal;
@@ -148,7 +156,15 @@ export class AppLogger {
 
 function normalizeLevel(level: string): LogLevel {
     const normalized = level.toLowerCase();
-    if (normalized === 'fatal' || normalized === 'critical' || normalized === 'error' || normalized === 'warn' || normalized === 'info' || normalized === 'debug' || normalized === 'trace') {
+    if (
+        normalized === 'fatal' ||
+        normalized === 'critical' ||
+        normalized === 'error' ||
+        normalized === 'warn' ||
+        normalized === 'info' ||
+        normalized === 'debug' ||
+        normalized === 'trace'
+    ) {
         return normalized;
     }
 

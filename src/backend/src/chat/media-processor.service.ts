@@ -34,7 +34,10 @@ export class MediaProcessorService {
                 ])
                 .toFormat('mp4')
                 .on('error', (err) => {
-                    this.logger.error('Error processing video', err instanceof Error ? err.stack ?? err.message : String(err));
+                    this.logger.error(
+                        'Error processing video',
+                        err instanceof Error ? (err.stack ?? err.message) : String(err)
+                    );
                     reject(err);
                 })
                 .on('end', () => {
