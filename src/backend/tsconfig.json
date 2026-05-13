@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "target": "ES2023",
+    "target": "esnext",
     "strict": true,
     "esModuleInterop": true,
     "isolatedModules": true,

@@ -108,10 +108,7 @@ export class UsersService {
         const filename = `${id}.webp`;
         const filePath = path.join(uploadDir, filename);
 
-        /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-        // @ts-expect-error Bun.Image is not in the types yet
         await new Bun.Image(file.buffer).resize(128, 128).webp().write(filePath);
-        /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 
         const publicUrl = `/uploads/profile-pictures/${filename}`;
         const user = await this.usersRepo.update(id, { profilePicture: publicUrl });

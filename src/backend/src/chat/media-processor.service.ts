@@ -9,8 +9,6 @@ export class MediaProcessorService {
 
     async processImage(inputPath: string, outputPath: string): Promise<void> {
         this.logger.debug('Processing chat image', { inputPath, outputPath });
-        /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
-        // @ts-expect-error Bun.Image is not in the types yet
         await new Bun.Image(inputPath)
             .resize(1920, 1920, {
                 fit: 'inside',
@@ -18,7 +16,6 @@ export class MediaProcessorService {
             })
             .webp({ quality: 80 })
             .write(outputPath);
-        /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
     }
 
     async processVideo(inputPath: string, outputPath: string): Promise<void> {
