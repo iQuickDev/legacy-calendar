@@ -46,5 +46,5 @@ async function bootstrap() {
 
 bootstrap().catch((err) => {
     const logger = new AppLogger('Bootstrap');
-    logger.fatal('Error starting application', err instanceof Error ? err : String(err));
+    logger.fatal('Error starting application', err);
 });

@@ -28,10 +28,7 @@ export class UsersService {
             return user;
         } catch (error) {
             this.throwFriendlyUserError(error, 'Username already taken');
-            this.logger.error(
-                'Failed to create user',
-                error instanceof Error ? (error.stack ?? error.message) : String(error)
-            );
+            this.logger.error('Failed to create user', error);
             throw error;
         }
     }
@@ -74,10 +71,7 @@ export class UsersService {
             return user;
         } catch (error) {
             this.handleUserWriteError(error, id);
-            this.logger.error(
-                'Failed to update user',
-                error instanceof Error ? (error.stack ?? error.message) : String(error)
-            );
+            this.logger.error('Failed to update user', error);
             throw error;
         }
     }
@@ -90,10 +84,7 @@ export class UsersService {
             return user;
         } catch (error) {
             this.handleUserWriteError(error, id);
-            this.logger.error(
-                'Failed to remove user',
-                error instanceof Error ? (error.stack ?? error.message) : String(error)
-            );
+            this.logger.error('Failed to remove user', error);
             throw error;
         }
     }

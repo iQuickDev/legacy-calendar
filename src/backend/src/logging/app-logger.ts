@@ -27,28 +27,28 @@ export class AppLogger {
         private readonly context: string,
         private readonly minimumLevel: LogLevel = DEFAULT_LEVEL
     ) {
-        const rootLogger = (PinoLogger.root ?? pinoFactory({ level: DEFAULT_LEVEL })) as pino.Logger;
+        const rootLogger = PinoLogger.root ?? pinoFactory({ level: DEFAULT_LEVEL });
         this.logger = rootLogger.child ? rootLogger.child({ context: this.context }) : rootLogger;
     }
 
-    log(message: unknown, context?: string): void {
-        this.write('info', message, undefined, context);
+    log(message: unknown, details?: LogDetails, context?: string): void {
+        this.write('info', message, details, context);
     }
 
-    error(message: unknown, trace?: string, context?: string): void {
-        this.write('error', message, trace, context);
+    error(message: unknown, details?: LogDetails, context?: string): void {
+        this.write('error', message, details, context);
     }
 
-    warn(message: unknown, context?: string): void {
-        this.write('warn', message, undefined, context);
+    warn(message: unknown, details?: LogDetails, context?: string): void {
+        this.write('warn', message, details, context);
     }
 
-    debug(message: unknown, context?: string): void {
-        this.write('debug', message, undefined, context);
+    debug(message: unknown, details?: LogDetails, context?: string): void {
+        this.write('debug', message, details, context);
     }
 
-    verbose(message: unknown, context?: string): void {
-        this.write('trace', message, undefined, context);
+    verbose(message: unknown, details?: LogDetails, context?: string): void {
+        this.write('trace', message, details, context);
     }
 
     info(message: unknown, details?: LogDetails, context?: string): void {
@@ -90,7 +90,7 @@ export class AppLogger {
         }
 
         try {
-            return JSON.stringify(value, this.replacer);
+            return JSON.stringify(value, (key, val) => this.replacer(key, val));
         } catch {
             return String(value);
         }
