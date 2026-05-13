@@ -92,7 +92,7 @@ const showDialog = computed({
 
 const dialogPt = computed(() => ({
     root: {
-        class: isMobile.value ? 'rounded-none' : 'rounded-2xl border border-zinc-800 shadow-2xl'
+        class: isMobile.value ? 'rounded-none border-none!' : 'rounded-2xl border border-zinc-800 shadow-2xl'
     },
     pcMaximizeButton: {
         root: {
