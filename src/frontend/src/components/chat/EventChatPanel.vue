@@ -5,6 +5,7 @@ import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import Textarea from 'primevue/textarea';
 import Tag from 'primevue/tag';
+import ToggleSwitch from 'primevue/toggleswitch';
 import { useRouter } from 'vue-router';
 import UserAvatar from '../UserAvatar.vue';
 import type { Event as CalendarEvent } from '../../types/Event';
@@ -12,6 +13,7 @@ import type { ChatMessage } from '../../types/Chat';
 import { useEventChat } from '../../composables/useEventChat';
 import { useSessionStore } from '../../stores/session';
 import { uploadsBaseURL } from '../../services/API';
+import API from '../../services/API';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 
@@ -42,6 +44,8 @@ const reactionPickerMessageId = ref<number | null>(null);
 const suppressAutoScroll = ref(false);
 const isScrolledToBottom = ref(true);
 const chatInitialized = ref(false);
+const isChatMuted = ref(false);
+const muteStateLoading = ref(false);
 
 const isEditDialogVisible = computed({
     get: () => editingMessageId.value !== null,
@@ -340,6 +344,56 @@ function getMediaKind(mediaType: string | null) {
 const triggerFilePicker = () => {
     fileInput.value?.click();
 };
+
+const loadMuteState = async () => {
+    if (!props.event?.id) {
+        isChatMuted.value = false;
+        return;
+    }
+
+    try {
+        const response = await API.getMutedChatEvents();
+        isChatMuted.value = response.data.includes(props.event.id);
+    } catch {
+        isChatMuted.value = false;
+    }
+};
+
+const handleMuteToggle = async (nextValue: boolean) => {
+    if (!props.event?.id || muteStateLoading.value) {
+        return;
+    }
+
+    const previousValue = isChatMuted.value;
+    isChatMuted.value = nextValue;
+    muteStateLoading.value = true;
+
+    try {
+        if (nextValue) {
+            await API.muteChatNotifications(props.event.id);
+        } else {
+            await API.unmuteChatNotifications(props.event.id);
+        }
+    } catch {
+        isChatMuted.value = previousValue;
+        toast.add({
+            severity: 'error',
+            summary: 'Chat mute',
+            detail: nextValue ? 'Failed to mute chat notifications' : 'Failed to unmute chat notifications',
+            life: 4000
+        });
+    } finally {
+        muteStateLoading.value = false;
+    }
+};
+
+watch(
+    () => props.event?.id,
+    async () => {
+        await loadMuteState();
+    },
+    { immediate: true }
+);
 </script>
 
 <template>
@@ -361,6 +415,14 @@ const triggerFilePicker = () => {
                     <Tag v-if="chat.connected.value" severity="success" value="Live" />
                 </div>
                 <p class="text-surface-500 m-0 text-xs">{{ subtitle }}</p>
+            </div>
+            <div v-if="props.event" class="border-surface-800/80 flex items-center gap-2 rounded-full border px-3 py-2">
+                <span class="text-surface-400 text-xs font-semibold tracking-wide">Mute chat</span>
+                <ToggleSwitch
+                    :modelValue="isChatMuted"
+                    :disabled="muteStateLoading"
+                    @update:modelValue="handleMuteToggle"
+                />
             </div>
             <Button
                 v-if="chat.hasMore.value"

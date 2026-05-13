@@ -17,6 +17,7 @@ model User {
   invitations                Attendance[]
   hostedEvents               Event[]          @relation("EventHost")
   fcmTokens                  FcmToken[]
+  chatMutes                  ChatMute[]
   rideAssignmentsAsDriver    RideAssignment[] @relation("RideAssignmentDriver")
   rideAssignmentsAsPassenger RideAssignment[] @relation("RideAssignmentPassenger")
   isAdmin                    Boolean          @default(false)
@@ -58,6 +59,7 @@ model Event {
   host                  User             @relation("EventHost", fields: [hostId], references: [id])
   rideAssignments       RideAssignment[]
   chatMessages          ChatMessage[]
+  chatMutes             ChatMute[]
 }
 
 model Attendance {
@@ -140,4 +142,16 @@ model ChatReaction {
   user    User        @relation(fields: [userId], references: [id])
 
   @@unique([messageId, userId, emoji])
+}
+
+model ChatMute {
+  id      Int   @id @default(autoincrement())
+  userId  Int
+  eventId Int
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
 }

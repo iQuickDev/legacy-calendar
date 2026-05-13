@@ -27,12 +27,14 @@ export const notificationStorage = {
     async getSettings(): Promise<NotificationSettings> {
         const defaultSettings: NotificationSettings = {
             [NotificationCode.INVITATION_NEW]: true,
+            [NotificationCode.EVENT_CREATED]: true,
             [NotificationCode.EVENT_UPDATED]: true,
             [NotificationCode.EVENT_CANCELLED]: true,
             [NotificationCode.PARTICIPATION_ACCEPTED]: true,
             [NotificationCode.PARTICIPATION_UPDATED]: true,
             [NotificationCode.PARTICIPATION_CANCELLED]: true,
-            [NotificationCode.PARTICIPANT_JOINED]: true
+            [NotificationCode.RIDE_ASSIGNED]: true,
+            [NotificationCode.CHAT_NEW_MESSAGE]: true
         };
 
         try {

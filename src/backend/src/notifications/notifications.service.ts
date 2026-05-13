@@ -1,8 +1,9 @@
-import { Injectable, OnModuleInit, Inject } from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import admin from 'firebase-admin';
 import { PrismaService } from '../prisma/prisma.service.js';
 import * as path from 'path';
 import { AppLogger } from '../logging/app-logger.js';
+import { NotificationCode } from './notification-codes.js';
 
 @Injectable()
 export class NotificationsService implements OnModuleInit {
@@ -62,6 +63,8 @@ export class NotificationsService implements OnModuleInit {
     }
 
     async sendNotification(token: string, title: string, body: string, data?: Record<string, string>) {
+        const payloadData = this.buildPayloadData(title, body, data);
+        this.validateNotificationData(payloadData);
         if (!this.initialized) {
             this.logger.warn('Firebase not initialized, skipping notification');
             return;
@@ -70,13 +73,9 @@ export class NotificationsService implements OnModuleInit {
         try {
             await admin.messaging().send({
                 token,
-                notification: {
-                    title,
-                    body
-                },
-                data
+                data: payloadData
             });
-            this.logger.info('Notification sent', { token, title, dataKeys: data ? Object.keys(data) : [] });
+            this.logger.info('Notification sent', { token, title, dataKeys: Object.keys(payloadData) });
         } catch (error) {
             this.logger.error(
                 'Failed to send notification',
@@ -86,6 +85,8 @@ export class NotificationsService implements OnModuleInit {
     }
 
     async sendMulticast(tokens: string[], title: string, body: string, data?: Record<string, string>) {
+        const payloadData = this.buildPayloadData(title, body, data);
+        this.validateNotificationData(payloadData);
         if (!this.initialized || tokens.length === 0) {
             this.logger.debug('Skipping multicast notification', {
                 initialized: this.initialized,
@@ -97,11 +98,7 @@ export class NotificationsService implements OnModuleInit {
         try {
             const response = await admin.messaging().sendEachForMulticast({
                 tokens,
-                notification: {
-                    title,
-                    body
-                },
-                data
+                data: payloadData
             });
             this.logger.info('Multicast notification sent', {
                 successCount: response.successCount,
@@ -114,6 +111,124 @@ export class NotificationsService implements OnModuleInit {
                 'Failed to send multicast notifications',
                 error instanceof Error ? (error.stack ?? error.message) : String(error)
             );
+        }
+    }
+
+    async getMutedEventIds(userId: number): Promise<number[]> {
+        const mutes = await this.prisma.chatMute.findMany({
+            where: { userId },
+            select: { eventId: true },
+            orderBy: { eventId: 'asc' }
+        });
+
+        return mutes.map((mute) => mute.eventId);
+    }
+
+    async getMutedUserIdsForEvent(eventId: number, userIds: number[]): Promise<number[]> {
+        if (userIds.length === 0) {
+            return [];
+        }
+
+        const mutes = await this.prisma.chatMute.findMany({
+            where: {
+                eventId,
+                userId: { in: userIds }
+            },
+            select: { userId: true }
+        });
+
+        return mutes.map((mute) => mute.userId);
+    }
+
+    async createChatMute(userId: number, eventId: number): Promise<boolean> {
+        await this.assertCanModifyChatMute(userId, eventId);
+
+        const existing = await this.prisma.chatMute.findUnique({
+            where: {
+                userId_eventId: {
+                    userId,
+                    eventId
+                }
+            }
+        });
+
+        if (existing) {
+            return false;
+        }
+
+        await this.prisma.chatMute.create({
+            data: {
+                userId,
+                eventId
+            }
+        });
+
+        return true;
+    }
+
+    async removeChatMute(userId: number, eventId: number): Promise<boolean> {
+        await this.assertCanModifyChatMute(userId, eventId);
+
+        const existing = await this.prisma.chatMute.findUnique({
+            where: {
+                userId_eventId: {
+                    userId,
+                    eventId
+                }
+            }
+        });
+
+        if (!existing) {
+            return false;
+        }
+
+        await this.prisma.chatMute.delete({
+            where: {
+                userId_eventId: {
+                    userId,
+                    eventId
+                }
+            }
+        });
+
+        return true;
+    }
+
+    private validateNotificationData(data?: Record<string, string>) {
+        const type = data?.type;
+        if (!type || !Object.values(NotificationCode).includes(type as NotificationCode)) {
+            throw new Error('Notification data payload must include a valid type');
+        }
+    }
+
+    private buildPayloadData(title: string, body: string, data?: Record<string, string>) {
+        return {
+            title,
+            body,
+            ...data
+        };
+    }
+
+    private async assertCanModifyChatMute(userId: number, eventId: number): Promise<void> {
+        const event = await this.prisma.event.findUnique({
+            where: { id: eventId },
+            select: {
+                id: true,
+                hostId: true,
+                participants: {
+                    where: { userId },
+                    select: { id: true }
+                }
+            }
+        });
+
+        if (!event) {
+            throw new NotFoundException(`Event with id ${eventId} not found`);
+        }
+
+        const canModify = event.hostId === userId || event.participants.length > 0;
+        if (!canModify) {
+            throw new ForbiddenException('You can only change mute preferences for events you participate in');
         }
     }
 }

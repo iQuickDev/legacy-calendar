@@ -1,5 +1,6 @@
 export const EVENT_NOTIFICATION_TITLES = {
     invitationNew: 'New Invitation',
+    eventCreated: 'New Event',
     eventUpdated: 'Event Updated',
     eventCancelled: 'Event Cancelled',
     participationAccepted: 'Invite Accepted',
@@ -9,7 +10,8 @@ export const EVENT_NOTIFICATION_TITLES = {
 } as const;
 
 export const EVENT_NOTIFICATION_MESSAGES = {
-    invitationNew: (eventTitle: string) => `You have been invited to "${eventTitle}"`,
+    invitationNew: (actorUsername: string, eventTitle: string) => `${actorUsername} invited you to ${eventTitle}`,
+    eventCreated: (actorUsername: string, eventTitle: string) => `${actorUsername} created a new event: ${eventTitle}`,
     eventUpdated: (eventTitle: string) => `Event "${eventTitle}" has been updated.`,
     eventCancelled: (eventTitle: string) => `Event "${eventTitle}" has been cancelled.`,
     participationAccepted: (username: string, eventTitle: string) =>
@@ -18,5 +20,6 @@ export const EVENT_NOTIFICATION_MESSAGES = {
         `${username} has updated their preferences for "${eventTitle}"`,
     participationCancelled: (username: string, eventTitle: string) =>
         `${username} has cancelled their participation in "${eventTitle}"`,
-    rideAssigned: (eventTitle: string) => `You have been assigned a ride for "${eventTitle}"`
+    rideAssigned: (actorUsername: string, eventTitle: string) =>
+        `${actorUsername} assigned you to a ride for ${eventTitle}`
 } as const;

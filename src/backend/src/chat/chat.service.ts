@@ -5,6 +5,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { InviteStatus, ChatMediaType } from '../../prisma/generated/client.js';
 import * as path from 'path';
 import { AppLogger } from '../logging/app-logger.js';
+import { NotificationCode } from '../notifications/notification-codes.js';
 
 export type ChatMessagePayload = {
     id: number;
@@ -303,7 +304,7 @@ export class ChatService {
             ...event.participants
                 .filter((participant) => participant.status === InviteStatus.ACCEPTED)
                 .map((participant) => participant.userId)
-        ];
+        ].filter((participantId) => participantId !== message.authorId);
         const offlineParticipantIds = [...new Set(participantIds)].filter(
             (participantId) => !connectedUserIds.has(participantId)
         );
@@ -315,11 +316,25 @@ export class ChatService {
             return;
         }
 
-        const tokens = await this.eventsRepo.getUserTokens(offlineParticipantIds);
+        const mutedRecipientIds = new Set(
+            await this.notificationsService.getMutedUserIdsForEvent(message.eventId, offlineParticipantIds)
+        );
+        const deliverableRecipientIds = offlineParticipantIds.filter(
+            (participantId) => !mutedRecipientIds.has(participantId)
+        );
+
+        if (deliverableRecipientIds.length === 0) {
+            this.logger.trace('Skipping chat push notification: all offline recipients are muted', {
+                messageId: message.id
+            });
+            return;
+        }
+
+        const tokens = await this.eventsRepo.getUserTokens(deliverableRecipientIds);
         if (tokens.length === 0) {
             this.logger.trace('Skipping chat push notification: no device tokens found', {
                 messageId: message.id,
-                offlineParticipantCount: offlineParticipantIds.length
+                offlineParticipantCount: deliverableRecipientIds.length
             });
             return;
         }
@@ -328,18 +343,20 @@ export class ChatService {
         const body = message.text
             ? `${authorUsername}: ${this.buildPreview(message.text)}`
             : message.mediaType
-              ? `${authorUsername} sent a ${message.mediaType}`
-              : authorUsername;
+              ? `${authorUsername}: ${this.getMediaDescription(message.mediaType)}`
+              : `${authorUsername}: Message`;
 
         await this.notificationsService.sendMulticast(tokens, event.title, body, {
-            type: 'CHAT_NEW_MESSAGE',
+            type: NotificationCode.CHAT_NEW_MESSAGE,
             eventId: String(message.eventId),
-            messageId: String(message.id)
+            messageId: String(message.id),
+            actorUsername: authorUsername
         });
         this.logger.info('Chat push notification sent', {
             messageId: message.id,
             eventId: message.eventId,
-            recipientCount: tokens.length
+            recipientCount: tokens.length,
+            mutedRecipientCount: mutedRecipientIds.size
         });
     }
 
@@ -396,6 +413,20 @@ export class ChatService {
     }
 
     private buildPreview(text: string): string {
-        return text.trim().slice(0, 100);
+        const trimmed = text.trim();
+        const preview = trimmed.slice(0, 100);
+        return trimmed.length > 100 ? `${preview}\u2026` : preview;
+    }
+
+    private getMediaDescription(mediaType: ChatMediaType): 'Image' | 'Video' | 'File' {
+        if (mediaType === 'video') {
+            return 'Video';
+        }
+
+        if (mediaType === 'image' || mediaType === 'gif') {
+            return 'Image';
+        }
+
+        return 'File';
     }
 }

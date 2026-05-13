@@ -4,8 +4,8 @@ import { clientsClaim } from 'workbox-core';
 import { initializeApp } from 'firebase/app';
 import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
 import { notificationStorage } from './services/notificationStorage';
-import { NotificationCode } from './types/Notification';
 import { createLogger } from './services/logger';
+import { isKnownNotificationCode, resolveNotificationRoute, shouldSuppressNotification } from './utils/notifications';
 
 declare let self: ServiceWorkerGlobalScope;
 
@@ -32,47 +32,50 @@ const logger = createLogger('ServiceWorker');
 onBackgroundMessage(messaging, async (payload) => {
     logger.info('Received background message', payload);
 
-    // Filter by category
-    const category = payload.data?.category as NotificationCode | undefined;
-    if (category) {
-        const settings = await notificationStorage.getSettings();
-        if (settings[category] === false) {
-            logger.debug('Notification category disabled, skipping background notification', { category });
-            return;
-        }
+    const type = payload.data?.type;
+    if (type && !isKnownNotificationCode(type)) {
+        logger.warn('Unknown notification type received in background', { type });
+    }
+
+    const settings = await notificationStorage.getSettings();
+    if (shouldSuppressNotification(type, settings)) {
+        logger.debug('Notification type disabled, skipping background notification', { type });
+        return;
     }
 
     const notificationTitle = payload.notification?.title || payload.data?.title || 'New Message';
     const notificationOptions: NotificationOptions = {
         body: payload.notification?.body || payload.data?.body,
         icon: '/icon.png',
-        data: payload.data // Pass through the data so it's available in notificationclick
+        data: payload.data
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
     logger.info('Background notification shown', {
         title: notificationTitle,
-        category: category ?? null
+        type: type ?? null
     });
 });
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
 
-    const targetUrl = '/';
+    const data = (event.notification.data || {}) as { type?: string; eventId?: string };
+    const targetUrl = resolveNotificationRoute(data.type, data.eventId);
 
     event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-            // Check if there is already a window/tab open
-            for (let i = 0; i < windowClients.length; i++) {
-                const client = windowClients[i];
-                if (client && 'focus' in client) {
-                    return client.focus();
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windowClients) => {
+            const client = windowClients[0];
+            if (client && 'focus' in client) {
+                await client.focus();
+                if ('navigate' in client) {
+                    await client.navigate(targetUrl);
                 }
+                return;
             }
-            // If not, open a new window/tab
+
             if (self.clients.openWindow) {
-                return self.clients.openWindow(targetUrl);
+                await self.clients.openWindow(targetUrl);
             }
         })
     );

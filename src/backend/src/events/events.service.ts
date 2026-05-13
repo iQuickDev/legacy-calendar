@@ -48,13 +48,16 @@ export class EventsService {
             });
 
             if (participantIds.length > 0) {
-                await this.notifyUserIds(
-                    participantIds,
-                    event.id,
-                    NotificationCode.INVITATION_NEW,
-                    EVENT_NOTIFICATION_TITLES.invitationNew,
-                    EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title)
-                );
+                await this.notifyUserIds(participantIds, {
+                    eventId: event.id,
+                    type: NotificationCode.EVENT_CREATED,
+                    title: event.title,
+                    body: EVENT_NOTIFICATION_MESSAGES.eventCreated(
+                        this.getActorUsername(event.host.username),
+                        event.title
+                    ),
+                    actorUsername: this.getActorUsername(event.host.username)
+                });
             }
 
             this.logger.info('Event created', { eventId: event.id, hostId, participantCount: participantIds.length });
@@ -122,12 +125,12 @@ export class EventsService {
 
         this.validateEventNotEnded(event);
 
-        await this.notifyParticipants(
-            event.id,
-            NotificationCode.EVENT_CANCELLED,
-            EVENT_NOTIFICATION_TITLES.eventCancelled,
-            EVENT_NOTIFICATION_MESSAGES.eventCancelled(event.title)
-        );
+        await this.notifyParticipants(event.id, {
+            type: NotificationCode.EVENT_CANCELLED,
+            title: EVENT_NOTIFICATION_TITLES.eventCancelled,
+            body: EVENT_NOTIFICATION_MESSAGES.eventCancelled(event.title),
+            actorUsername: this.getActorUsername(event.host.username)
+        });
 
         this.logger.info('Event removed', { eventId: id, userId });
         return this.eventsRepo.remove(id);
@@ -174,21 +177,27 @@ export class EventsService {
             const { toAdd } = participantDiff;
 
             if (toAdd.length > 0) {
-                await this.notifyUserIds(
-                    toAdd,
-                    event.id,
-                    NotificationCode.INVITATION_NEW,
-                    EVENT_NOTIFICATION_TITLES.invitationNew,
-                    EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title)
-                );
+                await this.notifyUserIds(toAdd, {
+                    eventId: event.id,
+                    type: NotificationCode.INVITATION_NEW,
+                    title: EVENT_NOTIFICATION_TITLES.invitationNew,
+                    body: EVENT_NOTIFICATION_MESSAGES.invitationNew(
+                        this.getActorUsername(event.host.username),
+                        this.sanitizeInvitationTitle(updatedEvent.title)
+                    ),
+                    actorUsername: this.getActorUsername(event.host.username)
+                });
             }
         }
 
         await this.notifyParticipants(
             event.id,
-            NotificationCode.EVENT_UPDATED,
-            EVENT_NOTIFICATION_TITLES.eventUpdated,
-            EVENT_NOTIFICATION_MESSAGES.eventUpdated(event.title),
+            {
+                type: NotificationCode.EVENT_UPDATED,
+                title: EVENT_NOTIFICATION_TITLES.eventUpdated,
+                body: EVENT_NOTIFICATION_MESSAGES.eventUpdated(updatedEvent.title),
+                actorUsername: this.getActorUsername(event.host.username)
+            },
             InviteStatus.ACCEPTED
         );
 
@@ -214,13 +223,16 @@ export class EventsService {
         const invitedUser = await this.eventsRepo.inviteUser(eventId, username);
 
         if (invitedUser) {
-            await this.notifyUserIds(
-                [invitedUser.id],
+            await this.notifyUserIds([invitedUser.id], {
                 eventId,
-                NotificationCode.INVITATION_NEW,
-                EVENT_NOTIFICATION_TITLES.invitationNew,
-                EVENT_NOTIFICATION_MESSAGES.invitationNew(event.title)
-            );
+                type: NotificationCode.INVITATION_NEW,
+                title: EVENT_NOTIFICATION_TITLES.invitationNew,
+                body: EVENT_NOTIFICATION_MESSAGES.invitationNew(
+                    this.getActorUsername(event.host.username),
+                    this.sanitizeInvitationTitle(event.title)
+                ),
+                actorUsername: this.getActorUsername(event.host.username)
+            });
         }
 
         this.logger.info('Invitation processed', {
@@ -264,14 +276,22 @@ export class EventsService {
                         hostTokens,
                         EVENT_NOTIFICATION_TITLES.participationAccepted,
                         EVENT_NOTIFICATION_MESSAGES.participationAccepted(username, event.title),
-                        { type: NotificationCode.PARTICIPATION_ACCEPTED, eventId: String(eventId) }
+                        {
+                            type: NotificationCode.PARTICIPATION_ACCEPTED,
+                            eventId: String(eventId),
+                            actorUsername: username
+                        }
                     );
                 } else {
                     await this.notificationsService.sendMulticast(
                         hostTokens,
                         EVENT_NOTIFICATION_TITLES.participationUpdated,
                         EVENT_NOTIFICATION_MESSAGES.participationUpdated(username, event.title),
-                        { type: NotificationCode.PARTICIPATION_UPDATED, eventId: String(eventId) }
+                        {
+                            type: NotificationCode.PARTICIPATION_UPDATED,
+                            eventId: String(eventId),
+                            actorUsername: username
+                        }
                     );
                 }
             }
@@ -301,7 +321,11 @@ export class EventsService {
                         hostTokens,
                         EVENT_NOTIFICATION_TITLES.participationCancelled,
                         EVENT_NOTIFICATION_MESSAGES.participationCancelled(username, event.title),
-                        { type: NotificationCode.PARTICIPATION_CANCELLED, eventId: String(eventId) }
+                        {
+                            type: NotificationCode.PARTICIPATION_CANCELLED,
+                            eventId: String(eventId),
+                            actorUsername: username
+                        }
                     );
                 }
             }
@@ -390,13 +414,15 @@ export class EventsService {
         await this.eventsRepo.assignRide(eventId, passengerId, driverId);
 
         if (driverId !== null) {
-            await this.notifyUserIds(
-                [passengerId],
+            const actorUser = await this.eventsRepo.getUserById(requestingUserId);
+            const actorUsername = this.getActorUsername(actorUser?.username);
+            await this.notifyUserIds([passengerId], {
                 eventId,
-                NotificationCode.EVENT_UPDATED,
-                EVENT_NOTIFICATION_TITLES.rideAssigned,
-                EVENT_NOTIFICATION_MESSAGES.rideAssigned(event.title)
-            );
+                type: NotificationCode.RIDE_ASSIGNED,
+                title: EVENT_NOTIFICATION_TITLES.rideAssigned,
+                body: this.truncateText(EVENT_NOTIFICATION_MESSAGES.rideAssigned(actorUsername, event.title), 200),
+                actorUsername
+            });
         }
 
         this.logger.info('Ride assignment updated', { eventId, passengerId, driverId, requestingUserId });
@@ -499,9 +525,7 @@ export class EventsService {
 
     private async notifyParticipants(
         eventId: number,
-        type: NotificationCode,
-        title: string,
-        body: string,
+        notification: { type: NotificationCode; title: string; body: string; actorUsername?: string },
         status?: InviteStatus
     ) {
         const tokens = status
@@ -509,23 +533,65 @@ export class EventsService {
             : await this.eventsRepo.getParticipantTokens(eventId);
 
         if (tokens.length > 0) {
-            this.logger.debug('Sending participant notification', { eventId, type, recipientCount: tokens.length });
-            await this.notificationsService.sendMulticast(tokens, title, body, { type, eventId: String(eventId) });
+            const data = this.buildNotificationData(eventId, notification.type, notification.actorUsername);
+            this.logger.debug('Sending participant notification', {
+                eventId,
+                type: notification.type,
+                recipientCount: tokens.length
+            });
+            await this.notificationsService.sendMulticast(tokens, notification.title, notification.body, data);
         }
     }
 
     private async notifyUserIds(
         userIds: number[],
-        eventId: number,
-        type: NotificationCode,
-        title: string,
-        body: string
+        notification: { eventId: number; type: NotificationCode; title: string; body: string; actorUsername?: string }
     ) {
         const tokens = await this.eventsRepo.getUserTokens(userIds);
 
         if (tokens.length > 0) {
-            this.logger.debug('Sending direct notification', { eventId, type, recipientCount: tokens.length });
-            await this.notificationsService.sendMulticast(tokens, title, body, { type, eventId: String(eventId) });
+            const data = this.buildNotificationData(
+                notification.eventId,
+                notification.type,
+                notification.actorUsername
+            );
+            this.logger.debug('Sending direct notification', {
+                eventId: notification.eventId,
+                type: notification.type,
+                recipientCount: tokens.length
+            });
+            await this.notificationsService.sendMulticast(tokens, notification.title, notification.body, data);
         }
+    }
+
+    private buildNotificationData(eventId: number, type: NotificationCode, actorUsername?: string) {
+        const data: Record<string, string> = {
+            type,
+            eventId: String(eventId)
+        };
+
+        if (actorUsername) {
+            data.actorUsername = actorUsername;
+        }
+
+        return data;
+    }
+
+    private truncateText(value: string, maxLength: number): string {
+        if (value.length <= maxLength) {
+            return value;
+        }
+
+        return `${value.slice(0, Math.max(0, maxLength - 1))}\u2026`;
+    }
+
+    private getActorUsername(value?: string | null): string {
+        const trimmed = value?.trim();
+        return trimmed ? this.truncateText(trimmed, 50) : 'Someone';
+    }
+
+    private sanitizeInvitationTitle(value?: string | null): string {
+        const trimmed = value?.trim();
+        return trimmed ? this.truncateText(trimmed, 100) : 'an event';
     }
 }

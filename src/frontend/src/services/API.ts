@@ -175,6 +175,18 @@ class API {
         return this.client.post('/notifications/unsubscribe', { token });
     }
 
+    async getMutedChatEvents(): Promise<AxiosResponse<number[]>> {
+        return this.client.get('/notifications/mute');
+    }
+
+    async muteChatNotifications(eventId: number): Promise<AxiosResponse<void>> {
+        return this.client.post(`/notifications/mute/${eventId}`);
+    }
+
+    async unmuteChatNotifications(eventId: number): Promise<AxiosResponse<void>> {
+        return this.client.delete(`/notifications/mute/${eventId}`);
+    }
+
     // --- Profile Picture ---
 
     async uploadProfilePicture(file: File, userId?: number): Promise<AxiosResponse<User>> {
