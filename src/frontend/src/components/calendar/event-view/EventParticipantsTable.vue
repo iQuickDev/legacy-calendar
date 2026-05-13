@@ -28,7 +28,7 @@ const declinedCount = computed(() => resolvedInvitees.value.filter((i) => i.stat
         <Accordion :value="null">
             <AccordionPanel value="0" class="w-full! border-none!">
                 <AccordionHeader class="px-2! py-1! sm:pl-0!">
-                    <div class="flex w-full flex-col gap-2 pr-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex w-full flex-wrap justify-between gap-2 pr-4">
                         <div class="flex items-center gap-2 text-white!">
                             <i class="pi pi-users"></i>
                             <span class="font-semibold">Participants</span>
