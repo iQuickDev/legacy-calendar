@@ -93,20 +93,8 @@ const canAssignToDriver = (driverId: number) => {
                 <i class="pi pi-car"></i>
                 <span class="text-sm font-semibold tracking-wider uppercase">Transport & Rides</span>
             </div>
-            <div class="flex gap-2">
-                <Tag
-                    v-if="needsRide.length > 0"
-                    severity="warn"
-                    :value="`${needsRide.length} needing ride`"
-                    size="small"
-                />
-                <Tag
-                    v-if="selfTransport.length > 0"
-                    severity="secondary"
-                    :value="`${selfTransport.length} going by themselves`"
-                    size="small"
-                />
-            </div>
+
+            <Tag v-if="needsRide.length > 0" severity="warn" :value="`${needsRide.length} needing ride`" size="small" />
         </div>
 
         <div v-if="drivers.length > 0" class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -193,7 +181,7 @@ const canAssignToDriver = (driverId: number) => {
             No drivers available for this event yet.
         </div>
 
-        <div v-if="needsRide.length > 0" class="mt-2 flex flex-col gap-2">
+        <div class="mt-2 flex flex-col gap-2">
             <div class="flex items-center justify-between px-1">
                 <span class="text-[10px] font-black tracking-widest text-zinc-400 uppercase">
                     Unassigned Participants
@@ -206,7 +194,13 @@ const canAssignToDriver = (driverId: number) => {
                     Clear Selection ({{ selectedPassengerIds.length }})
                 </button>
             </div>
-            <div class="flex flex-col gap-1">
+            <div
+                v-if="needsRide.length === 0"
+                class="rounded-2xl border border-dashed border-zinc-200 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800"
+            >
+                Everyone has a ride
+            </div>
+            <div v-else class="flex flex-col gap-1">
                 <div
                     v-for="passenger in needsRide"
                     :key="passenger.id"
@@ -265,6 +259,29 @@ const canAssignToDriver = (driverId: number) => {
         >
             <i class="pi pi-exclamation-triangle text-lg"></i>
             <span class="animate-pulse text-xs font-bold tracking-widest uppercase">Aldo moro detected</span>
+        </div>
+
+        <!-- People going by themselves -->
+        <div v-if="selfTransport.length > 0" class="mt-2 flex flex-col gap-2">
+            <div class="flex items-center justify-between px-1">
+                <span class="text-[10px] font-black tracking-widest text-zinc-400 uppercase">
+                    Going by themselves ({{ selfTransport.length }})
+                </span>
+            </div>
+            <div class="flex flex-col gap-1">
+                <div
+                    v-for="passenger in selfTransport"
+                    :key="passenger.id"
+                    class="flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800/50 dark:bg-zinc-900/30"
+                >
+                    <div class="flex items-center gap-3">
+                        <UserAvatar :profilePicture="passenger.profilePicture" :username="passenger.username" />
+                        <div class="flex flex-col">
+                            <div class="text-sm font-medium">{{ passenger.username }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </template>
