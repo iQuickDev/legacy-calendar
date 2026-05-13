@@ -13,6 +13,7 @@ defineProps<{
 const {
     drivers,
     needsRide,
+    selfTransport,
     resolvedInvitees,
     dragOverDriverId,
     isHost,
@@ -87,12 +88,25 @@ const canAssignToDriver = (driverId: number) => {
 
 <template>
     <div class="flex flex-col gap-3">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="text-surface-600 dark:text-surface-400 flex items-center gap-2">
                 <i class="pi pi-car"></i>
                 <span class="text-sm font-semibold tracking-wider uppercase">Transport & Rides</span>
             </div>
-            <Tag v-if="needsRide.length > 0" severity="warn" :value="`${needsRide.length} needing ride`" size="small" />
+            <div class="flex gap-2">
+                <Tag
+                    v-if="needsRide.length > 0"
+                    severity="warn"
+                    :value="`${needsRide.length} needing ride`"
+                    size="small"
+                />
+                <Tag
+                    v-if="selfTransport.length > 0"
+                    severity="secondary"
+                    :value="`${selfTransport.length} going by themselves`"
+                    size="small"
+                />
+            </div>
         </div>
 
         <div v-if="drivers.length > 0" class="grid grid-cols-1 gap-4 md:grid-cols-2">

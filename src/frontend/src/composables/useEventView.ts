@@ -191,6 +191,13 @@ export function useEventView(eventRef: Ref<Event | null>) {
             .sort((a, b) => a.username.localeCompare(b.username));
     });
 
+    const selfTransport = computed(() => {
+        if (!eventRef.value?.participants) return [];
+        return resolvedInvitees.value
+            .filter((participant) => participant.status === 'ACCEPTED' && participant.transportMode === 'SELF')
+            .sort((a, b) => a.username.localeCompare(b.username));
+    });
+
     const eventTotalBudget = computed(() => totalEventBudget(eventRef.value));
 
     const getFeatureCount = (feature: EventFeature) => featureCount(resolvedInvitees.value, feature);
@@ -248,6 +255,7 @@ export function useEventView(eventRef: Ref<Event | null>) {
         // State
         currentUser,
         eventHost,
+        selfTransport,
         resolvedInvitees,
         isHost,
         userParticipantStatus,
