@@ -26,9 +26,13 @@ type TypingUser = {
 const PAGE_SIZE = 50;
 const logger = createLogger('EventChat');
 
-export function useEventChat(eventIdInput: MaybeRefNumber) {
+export function useEventChat(
+    eventIdInput: MaybeRefNumber,
+    options: { enabled?: Ref<boolean> | ComputedRef<boolean> } = {}
+) {
     const sessionStore = useSessionStore();
     const eventId = computed(() => unref(eventIdInput) ?? null);
+    const isEnabled = computed(() => unref(options.enabled) !== false);
     const messages = ref<ChatMessage[]>([]);
     const pinnedMessages = ref<ChatMessage[]>([]);
     const typingUsers = ref<TypingUser[]>([]);
@@ -56,8 +60,12 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
     const connect = async () => {
         const id = eventId.value;
         const token = localStorage.getItem('token');
-        if (!id || !token) {
-            logger.trace('Skipping chat connection', { eventId: id, hasToken: Boolean(token) });
+        if (!id || !token || !isEnabled.value) {
+            logger.trace('Skipping chat connection', {
+                eventId: id,
+                hasToken: Boolean(token),
+                enabled: isEnabled.value
+            });
             return;
         }
 
@@ -171,7 +179,7 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
 
     const loadHistory = async () => {
         const id = eventId.value;
-        if (!id) return;
+        if (!id || !isEnabled.value) return;
 
         loadingHistory.value = true;
         try {
@@ -192,7 +200,7 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
 
     const loadPinnedMessages = async () => {
         const id = eventId.value;
-        if (!id) return;
+        if (!id || !isEnabled.value) return;
 
         loadingPinned.value = true;
         try {
@@ -347,17 +355,23 @@ export function useEventChat(eventIdInput: MaybeRefNumber) {
     };
 
     watch(
-        eventId,
-        async (next, previous) => {
-            if (next === previous) return;
-            logger.debug('Chat event changed', { previousEventId: previous, nextEventId: next });
+        [eventId, isEnabled],
+        async ([nextId, nextEnabled], [prevId, prevEnabled]) => {
+            if (nextId === prevId && nextEnabled === prevEnabled) return;
+
+            logger.debug('Chat event or enabled state changed', {
+                previousEventId: prevId,
+                nextEventId: nextId,
+                enabled: nextEnabled
+            });
+
             disconnect();
             messages.value = [];
             pinnedMessages.value = [];
             nextCursor.value = null;
             hasMore.value = false;
 
-            if (!next) {
+            if (!nextId || !nextEnabled) {
                 return;
             }
 

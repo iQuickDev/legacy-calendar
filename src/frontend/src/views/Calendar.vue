@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, defineAsyncComponent } from 'vue';
-import { useSharedEvent } from '../composables/useSharedEvent';
 import { format } from 'date-fns';
 import { useCalendar } from '../composables/useCalendar';
 import { useEventsStore } from '../stores/events';
@@ -13,6 +12,7 @@ import type { CreateEventDto } from '../types/Event';
 
 const EventDialog = defineAsyncComponent(() => import('../components/calendar/EventDialog.vue'));
 const EventViewDialog = defineAsyncComponent(() => import('../components/calendar/EventViewDialog.vue'));
+const EventChatDialog = defineAsyncComponent(() => import('../components/calendar/event-view/EventChatDialog.vue'));
 const EventEditDialog = defineAsyncComponent(() => import('../components/calendar/EventEditDialog.vue'));
 const DayViewDialog = defineAsyncComponent(() => import('../components/calendar/DayViewDialog.vue'));
 
@@ -74,6 +74,7 @@ import { useEventDialogs } from '../composables/useEventDialogs';
 const {
     showViewDialog,
     showEditDialog,
+    showChatDialog,
     eventToEdit,
     selectedEvent,
     openViewEvent,
@@ -120,18 +121,6 @@ const handleSwipe = () => {
         prevMonth();
     }
 };
-
-useSharedEvent({
-    onOpenEvent: openViewEvent,
-    findEvent: async (id) => {
-        let event = events.value.find((e) => e.id === id);
-        if (!event) {
-            await eventsStore.fetchEventById(id);
-            event = events.value.find((e) => e.id === id);
-        }
-        return event;
-    }
-});
 
 onMounted(() => {
     mobileMediaQuery = window.matchMedia(mobileBreakpoint);
@@ -244,6 +233,9 @@ onBeforeUnmount(() => {
             @delete="handleDeleteEvent"
             @edit="handleEditEvent"
         />
+
+        <!-- Event Chat Dialog -->
+        <EventChatDialog v-model:visible="showChatDialog" :event="selectedEvent" />
 
         <!-- Event Edit Dialog -->
         <EventEditDialog

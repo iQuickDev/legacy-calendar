@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, toRef, provide, defineAsyncComponent } from 'vue';
+import { computed, ref, watch, toRef, provide, defineAsyncComponent } from 'vue';
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
+import { useRoute, useRouter } from 'vue-router';
 
 import type { Event, EventFeature, TransportMode } from '../../types/Event';
 import { useEventsStore } from '../../stores/events';
@@ -11,9 +12,7 @@ import EventViewMode from './event-view/EventViewMode.vue';
 import { useEventView, EventViewInjectionKey } from '../../composables/useEventView';
 
 const FeatureSelectionDialog = defineAsyncComponent(() => import('./FeatureSelectionDialog.vue'));
-const EventChatDrawer = defineAsyncComponent(() => import('./event-view/EventChatDrawer.vue'));
 import type { ParticipateDto } from '../../types/Event';
-import { useRouter } from 'vue-router';
 
 const props = defineProps<{
     visible: boolean;
@@ -31,6 +30,7 @@ const emit = defineEmits<{
 const eventsStore = useEventsStore();
 const toast = useToast();
 const confirm = useConfirm();
+const route = useRoute();
 const router = useRouter();
 
 const eventView = useEventView(toRef(props, 'event'));
@@ -53,7 +53,16 @@ const {
 const joining = ref(false);
 const cancelling = ref(false);
 const showFeatureSelection = ref(false);
-const isChatOpen = ref(false);
+
+const currentSection = computed(() =>
+    route.name === 'upcoming' || route.path.startsWith('/upcoming/') ? 'upcoming' : 'calendar'
+);
+const currentEventPath = computed(() => {
+    const eventId = props.event?.id ?? parseEventId(route.params.id);
+    if (!eventId) return currentSection.value === 'upcoming' ? '/upcoming' : '/event';
+
+    return `${currentSection.value === 'upcoming' ? '/upcoming' : '/event'}/${eventId}`;
+});
 
 const onAcceptClick = () => {
     showFeatureSelection.value = true;
@@ -144,8 +153,6 @@ const onDragStart = (event: DragEvent, passengerId: number) => {
 
 const onDragOver = (event: DragEvent, driverId: number) => {
     event.preventDefault();
-    // Note: getAvailableSeats is in the composable but we need it here if we handle drag events here
-    // For now I'll just use a simplified check or import the helper
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
     dragOverDriverId.value = driverId;
 };
@@ -215,15 +222,9 @@ const onEdit = () => {
 const onOpenChat = () => {
     if (!props.event) return;
 
-    if (window.innerWidth < 768) {
-        emit('update:visible', false);
-        router.push({ name: 'event-chat', params: { id: props.event.id } });
-    } else {
-        isChatOpen.value = true;
-    }
+    void router.push({ path: `${currentEventPath.value}/chat` });
 };
 
-// Import helper for participant mapping
 import { participantWantsFromSelection } from '../../utils/event';
 
 watch(
@@ -234,6 +235,19 @@ watch(
         }
     }
 );
+
+function parseEventId(value: unknown) {
+    if (Array.isArray(value)) {
+        return parseEventId(value[0]);
+    }
+
+    if (typeof value !== 'string' || value.length === 0) {
+        return null;
+    }
+
+    const parsed = Number.parseInt(value, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+}
 </script>
 
 <template>
@@ -344,6 +358,4 @@ watch(
         :featureSplitPrices="eventSplitPrices"
         @confirm="handleFeatureConfirm"
     />
-
-    <EventChatDrawer v-model:visible="isChatOpen" :event="event" />
 </template>

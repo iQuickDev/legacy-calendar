@@ -220,3 +220,16 @@ export function openNavigation(location: string | null | undefined) {
     const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
     window.open(url, '_blank');
 }
+
+export function hasLocalChatAccess(event: Event | null | undefined, currentUserId: number | null | undefined) {
+    if (!event || currentUserId == null) return false;
+
+    const isHost = event.hostId === currentUserId || event.host?.id === currentUserId;
+    if (isHost) return true;
+
+    return (
+        event.participants?.some(
+            (participant) => participant.id === currentUserId && participant.status === 'ACCEPTED'
+        ) ?? false
+    );
+}

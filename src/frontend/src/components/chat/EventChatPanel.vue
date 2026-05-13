@@ -1,441 +1,43 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { format, formatDistanceToNowStrict, isToday, isYesterday, parseISO } from 'date-fns';
+import { injectEventChatDialogState } from '../calendar/event-view/chat/useEventChatDialogState';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
-import Textarea from 'primevue/textarea';
 import Tag from 'primevue/tag';
-import ToggleSwitch from 'primevue/toggleswitch';
-import { useRouter } from 'vue-router';
+import Textarea from 'primevue/textarea';
 import UserAvatar from '../UserAvatar.vue';
-import type { Event as CalendarEvent } from '../../types/Event';
-import type { ChatMessage } from '../../types/Chat';
-import { useEventChat } from '../../composables/useEventChat';
-import { useSessionStore } from '../../stores/session';
-import { uploadsBaseURL } from '../../services/API';
-import API from '../../services/API';
-import { useConfirm } from 'primevue/useconfirm';
-import { useToast } from 'primevue/usetoast';
 
-const props = defineProps<{
-    event: CalendarEvent | null;
-    mode?: 'page' | 'drawer';
-}>();
+const chatState = injectEventChatDialogState();
+const {
+    messagesContainer,
+    chat,
+    sortedPinnedMessages,
+    timelineRows,
+    currentUserId,
+    canModerate,
+    formatMessageTime,
+    resolveMediaUrl,
+    getMediaKind,
+    scrollToMessage,
+    onScroll,
+    onPickEmoji,
+    reactionPickerMessageId,
+    emojiChoices,
+    closePicker,
+    toggleReactionPicker,
+    openEditDialog,
+    confirmDelete,
+    togglePin,
+    isEditDialogVisible,
+    editingDraft,
+    saveEdit,
+    closeEditDialog
+} = chatState;
 
-defineEmits<{
-    (e: 'close'): void;
-}>();
-
-const router = useRouter();
-const sessionStore = useSessionStore();
-const confirm = useConfirm();
-const toast = useToast();
-
-const chat = useEventChat(computed(() => props.event?.id ?? null));
-const messagesContainer = ref<HTMLElement | null>(null);
-const fileInput = ref<HTMLInputElement | null>(null);
-const selectedFile = ref<File | null>(null);
-const selectedFilePreviewUrl = ref<string | null>(null);
-const draftText = ref('');
-const typingTimer = ref<ReturnType<typeof window.setTimeout> | null>(null);
-const editingMessageId = ref<number | null>(null);
-const editingDraft = ref('');
-const reactionPickerMessageId = ref<number | null>(null);
-const suppressAutoScroll = ref(false);
-const isScrolledToBottom = ref(true);
-const chatInitialized = ref(false);
-const isChatMuted = ref(false);
-const muteStateLoading = ref(false);
-
-const isEditDialogVisible = computed({
-    get: () => editingMessageId.value !== null,
-    set: (visible: boolean) => {
-        if (!visible) {
-            editingMessageId.value = null;
-            editingDraft.value = '';
-        }
-    }
-});
-
-const emojiChoices = ['👍', '❤️', '😂', '🎉', '🔥', '🙏'];
-
-const currentUserId = computed(() => sessionStore.currentUser?.id ?? null);
-const currentUserIsAdmin = computed(() => !!sessionStore.currentUser?.isAdmin);
-const currentEventHostId = computed(() => props.event?.hostId ?? null);
-const canModerate = computed(
-    () => currentUserIsAdmin.value || (currentUserId.value != null && currentUserId.value === currentEventHostId.value)
-);
-
-const title = computed(() => props.event?.title || 'Event Chat');
-const subtitle = computed(() => {
-    if (!props.event) return 'Live chat';
-    return `${chat.connected.value ? 'Connected' : 'Connecting'} · ${chat.messages.value.length} messages`;
-});
-
-const sortedPinnedMessages = computed(() => [...chat.pinnedMessages.value].sort(sortByDateAsc));
-
-const timelineRows = computed(() => {
-    const rows: Array<{ type: 'divider'; label: string } | { type: 'message'; message: ChatMessage }> = [];
-    let lastLabel: string | null = null;
-
-    for (const message of chat.messages.value) {
-        const label = getDateLabel(message.createdAt);
-        if (label !== lastLabel) {
-            rows.push({ type: 'divider', label });
-            lastLabel = label;
-        }
-
-        rows.push({ type: 'message', message });
-    }
-
-    return rows;
-});
-
-const previewFileLabel = computed(() => selectedFile.value?.name || '');
-const previewFileType = computed(() => selectedFile.value?.type || '');
-
-const scrollToBottom = async () => {
-    await nextTick();
-    const container = messagesContainer.value;
-    if (!container) return;
-    container.scrollTop = container.scrollHeight;
-    isScrolledToBottom.value = true;
-};
-
-const scrollToMessage = async (messageId: number) => {
-    await nextTick();
-    const element = messagesContainer.value?.querySelector(`[data-message-id="${messageId}"]`);
-    if (element instanceof HTMLElement) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-};
-
-const closePicker = () => {
-    reactionPickerMessageId.value = null;
-};
-
-const onPickEmoji = (messageId: number, emoji: string) => {
-    chat.toggleReaction(messageId, emoji);
-    reactionPickerMessageId.value = null;
-};
-
-const openEditDialog = (messageId: number) => {
-    const message = chat.messages.value.find((item) => item.id === messageId);
-    if (!message) return;
-    editingMessageId.value = messageId;
-    editingDraft.value = message.text || '';
-};
-
-const saveEdit = () => {
-    if (!editingMessageId.value) return;
-    const nextText = editingDraft.value.trim();
-    if (!nextText) {
-        toast.add({
-            severity: 'warn',
-            summary: 'Empty message',
-            detail: 'Edited messages need some text.',
-            life: 3000
-        });
-        return;
-    }
-
-    chat.editMessage(editingMessageId.value, nextText);
-    editingMessageId.value = null;
-    editingDraft.value = '';
-};
-
-const confirmDelete = (messageId: number) => {
-    confirm.require({
-        message: 'Delete this message? This cannot be undone.',
-        header: 'Delete Message',
-        icon: 'pi pi-trash',
-        rejectProps: { label: 'Cancel', severity: 'secondary', text: true },
-        acceptProps: { label: 'Delete', severity: 'danger' },
-        accept: () => chat.deleteMessage(messageId)
-    });
-};
-
-const togglePin = (messageId: number, isPinned: boolean) => {
-    if (isPinned) {
-        chat.unpinMessage(messageId);
-    } else {
-        chat.pinMessage(messageId);
-    }
-};
-
-const chooseFile = (event: globalThis.Event) => {
-    const input = event.target as HTMLInputElement | null;
-    const file = input?.files?.[0] ?? null;
-    selectedFile.value = file;
-
-    if (selectedFilePreviewUrl.value) {
-        URL.revokeObjectURL(selectedFilePreviewUrl.value);
-        selectedFilePreviewUrl.value = null;
-    }
-
-    if (file && file.type.startsWith('image/')) {
-        selectedFilePreviewUrl.value = URL.createObjectURL(file);
-    }
-};
-
-const clearSelectedFile = () => {
-    selectedFile.value = null;
-    if (selectedFilePreviewUrl.value) {
-        URL.revokeObjectURL(selectedFilePreviewUrl.value);
-        selectedFilePreviewUrl.value = null;
-    }
-};
-
-const emitTyping = () => {
-    chat.startTyping();
-
-    if (typingTimer.value) {
-        window.clearTimeout(typingTimer.value);
-    }
-
-    typingTimer.value = window.setTimeout(() => {
-        chat.stopTyping();
-    }, 1200);
-};
-
-const sendCurrentMessage = async () => {
-    const text = draftText.value.trim();
-    if (!text && !selectedFile.value) return;
-
-    try {
-        await chat.sendMessage(text, selectedFile.value ? { file: selectedFile.value } : undefined);
-        draftText.value = '';
-        clearSelectedFile();
-        chat.stopTyping();
-        await scrollToBottom();
-    } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Chat error',
-            detail: error instanceof Error ? error.message : 'Failed to send message',
-            life: 4000
-        });
-    }
-};
-
-const loadOlderMessages = async () => {
-    const container = messagesContainer.value;
-    if (!container) {
-        await chat.loadMoreHistory();
-        return;
-    }
-
-    const previousHeight = container.scrollHeight;
-    const previousTop = container.scrollTop;
-    suppressAutoScroll.value = true;
-    await chat.loadMoreHistory();
-    await nextTick();
-    container.scrollTop = previousTop + (container.scrollHeight - previousHeight);
-};
-
-const onScroll = () => {
-    const container = messagesContainer.value;
-    if (!container) return;
-    const remaining = container.scrollHeight - container.scrollTop - container.clientHeight;
-    isScrolledToBottom.value = remaining < 120;
-};
-
-watch(
-    () => chat.messages.value.length,
-    async () => {
-        if (suppressAutoScroll.value) {
-            suppressAutoScroll.value = false;
-            return;
-        }
-
-        if (isScrolledToBottom.value) {
-            await scrollToBottom();
-        }
-    }
-);
-
-watch(
-    () => chat.connectionError.value,
-    (error) => {
-        if (!error) return;
-        toast.add({
-            severity: 'warn',
-            summary: 'Chat connection',
-            detail: error,
-            life: 4000
-        });
-    }
-);
-
-watch(
-    () => chat.loadingHistory.value,
-    (isLoading, wasLoading) => {
-        if (wasLoading && !isLoading) {
-            chatInitialized.value = true;
-        }
-    }
-);
-
-watch(
-    () => chat.messages.value[chat.messages.value.length - 1]?.id,
-    (messageId, previousMessageId) => {
-        if (!chatInitialized.value || !messageId || messageId === previousMessageId) return;
-
-        const message = chat.messages.value[chat.messages.value.length - 1];
-        if (!message || message.authorId === currentUserId.value) return;
-
-        toast.add({
-            severity: 'info',
-            summary: `${message.authorUsername} sent a message`,
-            detail: message.text || (message.mediaType ? `${message.mediaType} attachment` : 'New chat activity'),
-            life: 3500
-        });
-
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) {
-            new Notification(`New message from ${message.authorUsername}`, {
-                body:
-                    message.text ||
-                    (message.mediaType ? `${message.mediaType} attachment` : 'Open the chat to view it'),
-                tag: `chat-message-${message.id}`
-            });
-        }
-    }
-);
-
-onBeforeUnmount(() => {
-    if (typingTimer.value) {
-        window.clearTimeout(typingTimer.value);
-    }
-
-    if (selectedFilePreviewUrl.value) {
-        URL.revokeObjectURL(selectedFilePreviewUrl.value);
-    }
-
-    chat.stopTyping();
-});
-
-function getDateLabel(value: string | Date) {
-    const date = typeof value === 'string' ? parseISO(value) : value;
-    if (isToday(date)) return 'Today';
-    if (isYesterday(date)) return 'Yesterday';
-    return format(date, 'EEEE, d MMMM');
-}
-
-function formatMessageTime(value: string | Date) {
-    const date = typeof value === 'string' ? parseISO(value) : value;
-    return formatDistanceToNowStrict(date, { addSuffix: true });
-}
-
-function sortByDateAsc<T extends { createdAt: string | Date }>(a: T, b: T) {
-    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-}
-
-function resolveMediaUrl(mediaUrl: string | null) {
-    if (!mediaUrl) return '';
-    if (/^https?:\/\//i.test(mediaUrl)) return mediaUrl;
-    const base = uploadsBaseURL.replace(/\/$/, '');
-    return `${base}/${mediaUrl.replace(/^\//, '')}`;
-}
-
-function getMediaKind(mediaType: string | null) {
-    return mediaType || 'file';
-}
-
-const triggerFilePicker = () => {
-    fileInput.value?.click();
-};
-
-const loadMuteState = async () => {
-    if (!props.event?.id) {
-        isChatMuted.value = false;
-        return;
-    }
-
-    try {
-        const response = await API.getMutedChatEvents();
-        isChatMuted.value = response.data.includes(props.event.id);
-    } catch {
-        isChatMuted.value = false;
-    }
-};
-
-const handleMuteToggle = async (nextValue: boolean) => {
-    if (!props.event?.id || muteStateLoading.value) {
-        return;
-    }
-
-    const previousValue = isChatMuted.value;
-    isChatMuted.value = nextValue;
-    muteStateLoading.value = true;
-
-    try {
-        if (nextValue) {
-            await API.muteChatNotifications(props.event.id);
-        } else {
-            await API.unmuteChatNotifications(props.event.id);
-        }
-    } catch {
-        isChatMuted.value = previousValue;
-        toast.add({
-            severity: 'error',
-            summary: 'Chat mute',
-            detail: nextValue ? 'Failed to mute chat notifications' : 'Failed to unmute chat notifications',
-            life: 4000
-        });
-    } finally {
-        muteStateLoading.value = false;
-    }
-};
-
-watch(
-    () => props.event?.id,
-    async () => {
-        await loadMuteState();
-    },
-    { immediate: true }
-);
+void messagesContainer;
 </script>
 
 <template>
     <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-none border-0 bg-transparent">
-        <header
-            class="bg-surface-950/95 sticky top-0 z-20 flex items-center gap-3 px-4 py-3 shadow-[0_1px_0_rgba(255,255,255,0.04)]"
-        >
-            <Button
-                v-if="mode !== 'drawer'"
-                icon="pi pi-arrow-left"
-                text
-                rounded
-                severity="secondary"
-                @click="router.back()"
-            />
-            <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                    <h2 class="truncate text-lg font-bold">{{ title }}</h2>
-                    <Tag v-if="chat.connected.value" severity="success" value="Live" />
-                </div>
-                <p class="text-surface-500 m-0 text-xs">{{ subtitle }}</p>
-            </div>
-            <div v-if="props.event" class="border-surface-800/80 flex items-center gap-2 rounded-full border px-3 py-2">
-                <span class="text-surface-400 text-xs font-semibold tracking-wide">Mute chat</span>
-                <ToggleSwitch
-                    :modelValue="isChatMuted"
-                    :disabled="muteStateLoading"
-                    @update:modelValue="handleMuteToggle"
-                />
-            </div>
-            <Button
-                v-if="chat.hasMore.value"
-                label="Older"
-                icon="pi pi-arrow-up"
-                severity="secondary"
-                text
-                size="small"
-                @click="loadOlderMessages"
-                :loading="chat.loadingMore.value"
-            />
-        </header>
-
         <section
             v-if="sortedPinnedMessages.length"
             class="bg-surface-950/70 px-4 py-3 shadow-[0_1px_0_rgba(255,255,255,0.03)]"
@@ -481,7 +83,7 @@ watch(
                     >
                         <div v-if="row.type === 'divider'" class="py-1.5 text-center">
                             <span
-                                class="border-surface-800/80 bg-surface-950/95 text-surface-400 rounded-full border px-3 py-1 text-[11px] font-semibold tracking-[0.2em] uppercase"
+                                class="rounded-full border border-zinc-800/80 bg-zinc-950/95 px-3 py-1 text-[11px] font-semibold tracking-[0.2em] text-zinc-400 uppercase"
                             >
                                 {{ row.label }}
                             </span>
@@ -580,10 +182,7 @@ watch(
                                             severity="secondary"
                                             icon="pi pi-smile"
                                             label="React"
-                                            @click="
-                                                reactionPickerMessageId =
-                                                    reactionPickerMessageId === row.message.id ? null : row.message.id
-                                            "
+                                            @click="toggleReactionPicker(row.message.id)"
                                         />
                                         <Button
                                             v-if="row.message.authorId === currentUserId"
@@ -660,58 +259,6 @@ watch(
             </div>
         </div>
 
-        <footer class="bg-surface-950/95 p-3 shadow-[0_-1px_0_rgba(255,255,255,0.04)]">
-            <div
-                v-if="selectedFile"
-                class="bg-surface-900/95 mb-3 rounded-2xl p-3 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
-            >
-                <div class="flex items-start gap-3">
-                    <div class="flex-1">
-                        <p class="m-0 text-sm font-semibold">{{ previewFileLabel }}</p>
-                        <p class="text-surface-500 m-0 text-xs">{{ previewFileType || 'attachment' }}</p>
-                    </div>
-                    <Button icon="pi pi-times" text rounded severity="secondary" @click="clearSelectedFile" />
-                </div>
-                <div
-                    v-if="selectedFilePreviewUrl"
-                    class="mt-3 overflow-hidden rounded-xl shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
-                >
-                    <img :src="selectedFilePreviewUrl" alt="Selected preview" class="max-h-44 w-full object-cover" />
-                </div>
-            </div>
-
-            <div class="flex flex-col gap-2">
-                <div class="flex items-end gap-2">
-                    <input
-                        ref="fileInput"
-                        id="chat-upload"
-                        type="file"
-                        class="hidden"
-                        accept="image/*,video/*,audio/*"
-                        @change="chooseFile"
-                    />
-                    <Button icon="pi pi-paperclip" text rounded severity="secondary" @click="triggerFilePicker" />
-                    <Textarea
-                        v-model="draftText"
-                        auto-resize
-                        rows="1"
-                        placeholder="Type a message, share a photo, or drop a clip…"
-                        class="bg-surface-900 max-h-24 min-h-11 flex-1 rounded-2xl! px-3! py-2! text-sm! shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
-                        @input="emitTyping"
-                        @blur="chat.stopTyping()"
-                        @keyup.enter.exact.prevent="sendCurrentMessage"
-                    />
-                    <Button
-                        icon="pi pi-send"
-                        rounded
-                        :loading="chat.sending.value"
-                        :disabled="!draftText.trim() && !selectedFile"
-                        @click="sendCurrentMessage"
-                    />
-                </div>
-            </div>
-        </footer>
-
         <Dialog
             v-model:visible="isEditDialogVisible"
             modal
@@ -722,7 +269,7 @@ watch(
             <div class="flex flex-col gap-3">
                 <Textarea v-model="editingDraft" auto-resize rows="4" class="w-full rounded-2xl!" />
                 <div class="flex justify-end gap-2">
-                    <Button label="Cancel" severity="secondary" text @click="editingMessageId = null" />
+                    <Button label="Cancel" severity="secondary" text @click="closeEditDialog" />
                     <Button label="Save" icon="pi pi-check" @click="saveEdit" />
                 </div>
             </div>

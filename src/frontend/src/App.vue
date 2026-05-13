@@ -17,7 +17,8 @@ const route = useRoute();
 const toast = useToast();
 const sessionStore = useSessionStore();
 const logger = createLogger('App');
-const showHeader = computed(() => !['login', 'event-chat'].includes(route.name as string));
+const showHeader = computed(() => route.name !== 'login');
+
 type ForegroundNotification = {
     id: number;
     title: string;
@@ -168,7 +169,7 @@ const transitionName = computed(() => {
     <main class="relative block w-full overflow-x-hidden">
         <router-view v-slot="{ Component }">
             <transition :name="transitionName" mode="out-in">
-                <component :is="Component" :key="route.path" />
+                <component :is="Component" />
             </transition>
         </router-view>
     </main>

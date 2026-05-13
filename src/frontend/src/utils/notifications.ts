@@ -32,12 +32,8 @@ export function resolveNotificationRoute(type: string | undefined, eventId: stri
         return `/event/${encodeURIComponent(trimmedEventId)}/chat`;
     }
 
-    if (type === 'calendar') {
-        return `/calendar?event=${encodeURIComponent(trimmedEventId)}`;
-    }
-
     if (isKnownNotificationCode(type)) {
-        return `/calendar?event=${encodeURIComponent(trimmedEventId)}`;
+        return `/event/${encodeURIComponent(trimmedEventId)}`;
     }
 
     return '/';

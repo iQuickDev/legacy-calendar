@@ -1,4 +1,5 @@
-import { ref, computed, type Ref } from 'vue';
+import { computed, ref, watch, type Ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useEventsStore } from '../stores/events';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
@@ -8,30 +9,82 @@ export function useEventDialogs(events: Ref<Event[]>, externalEvent?: Ref<Event 
     const eventsStore = useEventsStore();
     const toast = useToast();
     const confirm = useConfirm();
+    const route = useRoute();
+    const router = useRouter();
 
-    const selectedEventId = ref<number | null>(null);
-    const showViewDialog = ref(false);
-    const showEditDialog = ref(false);
     const eventToEdit = ref<Event | null>(null);
+
+    const currentSection = computed(() => getCurrentSection(route.path, route.name));
+    const eventPathPrefix = computed(() => (currentSection.value === 'upcoming' ? '/upcoming' : '/event'));
+    const basePagePath = computed(() => (currentSection.value === 'upcoming' ? '/upcoming' : '/calendar'));
+    const selectedEventId = computed(() => parseEventId(route.params.id));
+    const routeAction = computed(() => getRouteAction(route.path));
 
     const selectedEvent = computed(() => {
         if (!selectedEventId.value) return null;
+
         const event = events.value.find((e) => e.id === selectedEventId.value);
         if (event) return event;
+
         if (externalEvent?.value && externalEvent.value.id === selectedEventId.value) {
             return externalEvent.value;
         }
+
         return null;
     });
 
+    const closeEventState = async () => {
+        await router.replace({ path: basePagePath.value });
+    };
+
+    const closeOverlayToEvent = async () => {
+        if (!selectedEventId.value) {
+            await closeEventState();
+            return;
+        }
+
+        await router.replace({ path: `${eventPathPrefix.value}/${selectedEventId.value}` });
+    };
+
+    const showViewDialogState = computed({
+        get: () => selectedEventId.value !== null,
+        set: (visible: boolean) => {
+            if (visible) return;
+
+            void closeEventState();
+        }
+    });
+
+    const showEditDialogState = computed({
+        get: () => routeAction.value === 'edit' && selectedEventId.value !== null,
+        set: (visible: boolean) => {
+            if (visible) return;
+
+            void closeOverlayToEvent();
+        }
+    });
+
+    const showChatDialogState = computed({
+        get: () => routeAction.value === 'chat' && selectedEventId.value !== null,
+        set: (visible: boolean) => {
+            if (visible) return;
+
+            void closeOverlayToEvent();
+        }
+    });
+
     const openViewEvent = (eventOrId: number | Event) => {
-        selectedEventId.value = typeof eventOrId === 'number' ? eventOrId : eventOrId.id;
-        showViewDialog.value = true;
+        const eventId = typeof eventOrId === 'number' ? eventOrId : eventOrId.id;
+
+        if (selectedEventId.value === eventId && routeAction.value === null) {
+            return;
+        }
+
+        void router.push({ path: `${eventPathPrefix.value}/${eventId}` });
     };
 
     const handleEditEvent = (event: Event) => {
-        eventToEdit.value = JSON.parse(JSON.stringify(event));
-        showEditDialog.value = true;
+        void router.push({ path: `${eventPathPrefix.value}/${event.id}/edit` });
     };
 
     const handleDeleteEvent = async (id: number) => {
@@ -57,21 +110,100 @@ export function useEventDialogs(events: Ref<Event[]>, externalEvent?: Ref<Event 
                         detail: 'Event deleted successfully',
                         life: 3000
                     });
-                    showViewDialog.value = false;
-                    showEditDialog.value = false;
+                    showViewDialogState.value = false;
                 }
             }
         });
     };
 
+    watch(
+        [selectedEventId, routeAction, selectedEvent],
+        ([eventId, action, event]) => {
+            if (eventId === null) {
+                if (externalEvent) {
+                    externalEvent.value = null;
+                }
+                eventToEdit.value = null;
+                return;
+            }
+
+            if (action === 'edit' && event) {
+                eventToEdit.value = JSON.parse(JSON.stringify(event));
+            } else if (action !== 'edit') {
+                eventToEdit.value = null;
+            }
+        },
+        { immediate: true }
+    );
+
+    watch(
+        selectedEventId,
+        async (eventId) => {
+            if (eventId === null) {
+                if (externalEvent) {
+                    externalEvent.value = null;
+                }
+                eventToEdit.value = null;
+                return;
+            }
+
+            if (selectedEvent.value) {
+                return;
+            }
+
+            const loaded = await eventsStore.fetchEventById(eventId);
+            if (!loaded) {
+                void closeEventState();
+                return;
+            }
+
+            if (externalEvent) {
+                externalEvent.value =
+                    events.value.find((event) => event.id === eventId) ||
+                    eventsStore.events.find((event) => event.id === eventId) ||
+                    null;
+            }
+        },
+        { immediate: true }
+    );
+
     return {
         selectedEventId,
-        showViewDialog,
-        showEditDialog,
+        showViewDialog: showViewDialogState,
+        showEditDialog: showEditDialogState,
+        showChatDialog: showChatDialogState,
         eventToEdit,
         selectedEvent,
         openViewEvent,
         handleEditEvent,
         handleDeleteEvent
     };
+}
+
+function getCurrentSection(path: string, routeName: unknown) {
+    if (routeName === 'upcoming' || path.startsWith('/upcoming/')) {
+        return 'upcoming';
+    }
+
+    return 'calendar';
+}
+
+function getRouteAction(path: string) {
+    if (path.endsWith('/chat')) return 'chat';
+    if (path.endsWith('/map')) return 'map';
+    if (path.endsWith('/edit')) return 'edit';
+    return null;
+}
+
+function parseEventId(value: unknown) {
+    if (Array.isArray(value)) {
+        return parseEventId(value[0]);
+    }
+
+    if (typeof value !== 'string' || value.length === 0) {
+        return null;
+    }
+
+    const parsed = Number.parseInt(value, 10);
+    return Number.isNaN(parsed) ? null : parsed;
 }

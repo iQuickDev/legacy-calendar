@@ -8,10 +8,10 @@ import type { Event } from '../types/Event';
 import Button from 'primevue/button';
 
 import { useEventsStore } from '../stores/events';
-import { useSharedEvent } from '../composables/useSharedEvent';
 import { useEventWeather } from '../composables/useEventWeather';
 
 const EventViewDialog = defineAsyncComponent(() => import('../components/calendar/EventViewDialog.vue'));
+const EventChatDialog = defineAsyncComponent(() => import('../components/calendar/event-view/EventChatDialog.vue'));
 const EventEditDialog = defineAsyncComponent(() => import('../components/calendar/EventEditDialog.vue'));
 
 const eventsStore = useEventsStore();
@@ -19,18 +19,6 @@ const eventsStore = useEventsStore();
 const { upcomingEvents: events, loading, error } = storeToRefs(eventsStore);
 
 const { loadWeatherForEvents: refreshWeather } = useEventWeather(events);
-
-useSharedEvent({
-    onOpenEvent: (event) => openViewEvent(event),
-    findEvent: async (id) => {
-        let event = events.value.find((e) => e.id === id);
-        if (!event) {
-            await eventsStore.fetchEventById(id);
-            event = events.value.find((e) => e.id === id);
-        }
-        return event;
-    }
-});
 
 onMounted(async () => {
     await eventsStore.fetchUpcomingEvents();
@@ -48,6 +36,7 @@ const sharedEvent = ref<Event | null>(null);
 const {
     showViewDialog,
     showEditDialog,
+    showChatDialog,
     eventToEdit,
     selectedEvent,
     openViewEvent: baseOpenViewEvent,
@@ -144,6 +133,8 @@ const openViewEvent = (event: Event) => {
             @delete="handleDeleteEvent"
             @edit="handleEditEvent"
         />
+
+        <EventChatDialog v-model:visible="showChatDialog" :event="selectedEvent" />
 
         <!-- Event Edit Dialog -->
         <EventEditDialog

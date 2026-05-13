@@ -27,24 +27,12 @@ import {
     participantFeatures,
     selectedFeaturesFromEvent,
     totalEventBudget,
-    openNavigation
+    openNavigation,
+    hasLocalChatAccess
 } from '../utils/event';
 
 // Shared state for drag highlighting (Choice A)
 const dragOverDriverId = ref<number | null>(null);
-
-export function hasLocalChatAccess(event: Event | null, currentUserId: number | null | undefined) {
-    if (!event || currentUserId == null) return false;
-
-    const isHost = event.hostId === currentUserId || event.host?.id === currentUserId;
-    if (isHost) return true;
-
-    return (
-        event.participants?.some(
-            (participant) => participant.id === currentUserId && participant.status === 'ACCEPTED'
-        ) ?? false
-    );
-}
 
 export function useChatAccess(eventRef: Ref<Event | null>) {
     const sessionStore = useSessionStore();

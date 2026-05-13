@@ -6,7 +6,6 @@ const Login = () => import('../views/Login.vue');
 const AdminView = () => import('../views/AdminView.vue');
 const Profile = () => import('../views/Profile.vue');
 const Upcoming = () => import('../views/Upcoming.vue');
-const EventChatView = () => import('../views/EventChatView.vue');
 
 declare module 'vue-router' {
     interface RouteMeta {
@@ -18,17 +17,27 @@ declare module 'vue-router' {
 
 const routes: RouteRecordRaw[] = [
     { path: '/', name: 'login', component: Login, meta: { requiresGuest: true } },
-    { path: '/calendar', name: 'calendar', component: Calendar, meta: { requiresAuth: true } },
-    { path: '/upcoming', name: 'upcoming', component: Upcoming, meta: { requiresAuth: true } },
-    { path: '/admin', name: 'admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
-    { path: '/profile', name: 'profile', component: Profile, meta: { requiresAuth: true } },
     {
-        path: '/event/:id',
-        name: 'shared-event',
-        redirect: (to) => ({ name: 'calendar', query: { event: to.params.id } }),
+        path: '/calendar',
+        name: 'calendar',
+        component: Calendar,
         meta: { requiresAuth: true }
     },
-    { path: '/event/:id/chat', name: 'event-chat', component: EventChatView, meta: { requiresAuth: true } }
+    {
+        path: '/upcoming',
+        name: 'upcoming',
+        component: Upcoming,
+        meta: { requiresAuth: true }
+    },
+    { path: '/event/:id', name: 'calendar-event', component: Calendar, meta: { requiresAuth: true } },
+    { path: '/event/:id/chat', name: 'calendar-event-chat', component: Calendar, meta: { requiresAuth: true } },
+    { path: '/event/:id/map', name: 'calendar-event-map', component: Calendar, meta: { requiresAuth: true } },
+    { path: '/event/:id/edit', name: 'calendar-event-edit', component: Calendar, meta: { requiresAuth: true } },
+    { path: '/upcoming/:id', name: 'upcoming-event', component: Upcoming, meta: { requiresAuth: true } },
+    { path: '/upcoming/:id/chat', name: 'upcoming-event-chat', component: Upcoming, meta: { requiresAuth: true } },
+    { path: '/upcoming/:id/edit', name: 'upcoming-event-edit', component: Upcoming, meta: { requiresAuth: true } },
+    { path: '/admin', name: 'admin', component: AdminView, meta: { requiresAuth: true, requiresAdmin: true } },
+    { path: '/profile', name: 'profile', component: Profile, meta: { requiresAuth: true } }
 ];
 
 export const router = createRouter({

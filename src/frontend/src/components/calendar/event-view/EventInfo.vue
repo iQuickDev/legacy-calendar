@@ -7,6 +7,7 @@ import Button from 'primevue/button';
 import { injectEventView } from '../../../composables/useEventView';
 import api from '../../../services/API';
 import type { ChatMessage } from '../../../types/Chat';
+import { useRoute, useRouter } from 'vue-router';
 
 import UpcomingEventWeatherBadge from '../../UpcomingEventWeatherBadge.vue';
 import { useEventWeather } from '../../../composables/useEventWeather';
@@ -20,6 +21,8 @@ const props = defineProps<{
     event: Event;
 }>();
 
+const route = useRoute();
+const router = useRouter();
 const { getWeatherForEvent } = useEventWeather();
 const { getCoordsForEvent, getOrResolveCoords } = useGeocode();
 
@@ -27,7 +30,20 @@ const weather = computed(() => getWeatherForEvent(props.event.id));
 const coords = computed(() => getCoordsForEvent(props.event.id));
 
 const weatherDetailVisible = ref(false);
-const mapDialogVisible = ref(false);
+const currentSection = computed(() =>
+    route.name === 'upcoming' || route.path.startsWith('/upcoming/') ? 'upcoming' : 'calendar'
+);
+const eventPath = computed(() => `${currentSection.value === 'upcoming' ? '/upcoming' : '/event'}/${props.event.id}`);
+const mapDialogVisible = computed({
+    get: () => route.path.endsWith('/map'),
+    set: (visible: boolean) => {
+        if (visible) {
+            void router.push({ path: `${eventPath.value}/map` });
+        } else {
+            void router.replace({ path: eventPath.value });
+        }
+    }
+});
 
 const emit = defineEmits<{
     (e: 'open-chat'): void;
@@ -168,7 +184,6 @@ watch(
 
         <WeatherDialog v-model:visible="weatherDetailVisible" :event="event" :weather="weather" />
         <MapDialog
-            v-if="mapDialogVisible"
             v-model:visible="mapDialogVisible"
             :lat="coords?.lat ?? 0"
             :lon="coords?.lon ?? 0"
