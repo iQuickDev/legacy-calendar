@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { isSameDay } from 'date-fns';
 import { injectWeatherDialogState } from './useWeatherDialogState';
 
 const {
     availableDays,
-    selectedDay,
     // @ts-expect-error - dayScrollContainer is needed, otherwise autoscroll won't work!
     dayScrollContainer,
     selectDay,
     formatDay,
     formatDayFull,
     resetSelection,
-    isModified
+    isModified,
+    isSelectedDay
 } = injectWeatherDialogState();
 </script>
 
@@ -32,25 +31,22 @@ const {
             <button
                 v-for="day in availableDays"
                 :key="day.toISOString()"
-                :data-active="isSameDay(day, selectedDay)"
+                :data-active="isSelectedDay(day)"
                 @click="selectDay(day)"
                 class="flex min-w-[75px] flex-col items-center gap-1 rounded-xl border p-2 transition-all"
                 :class="[
-                    isSameDay(day, selectedDay)
+                    isSelectedDay(day)
                         ? 'border-zinc-100 bg-zinc-100'
                         : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
                 ]"
             >
                 <span
                     class="text-[9px] font-bold uppercase"
-                    :class="isSameDay(day, selectedDay) ? 'text-zinc-900' : 'text-zinc-500'"
+                    :class="isSelectedDay(day) ? 'text-zinc-900' : 'text-zinc-500'"
                 >
                     {{ formatDay(day) }}
                 </span>
-                <span
-                    class="text-[11px] font-bold"
-                    :class="isSameDay(day, selectedDay) ? 'text-zinc-950' : 'text-zinc-200'"
-                >
+                <span class="text-[11px] font-bold" :class="isSelectedDay(day) ? 'text-zinc-950' : 'text-zinc-200'">
                     {{ formatDayFull(day) }}
                 </span>
             </button>

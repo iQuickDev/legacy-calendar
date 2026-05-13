@@ -17,7 +17,18 @@ const pendingForecasts = new Map<string, Promise<any>>();
 // key: eventId, value: signature (location + startTime)
 const weatherFetchSignatures = new Map<number, string>();
 
-const formatDate = (date: Date): string => date.toISOString().split('T')[0];
+const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const normalizeIsDay = (value: unknown, fallback = true): boolean => {
+    if (value === 0 || value === false) return false;
+    if (value === 1 || value === true) return true;
+    return fallback;
+};
 
 const getWeekRange = (targetDate: Date) => {
     const start = new Date(targetDate);
@@ -166,10 +177,7 @@ export function useEventWeather(events?: Ref<Event[]>) {
                 if (weekStart < ninetyTwoDaysAgo) {
                     url = 'https://archive-api.open-meteo.com/v1/archive';
                     isArchive = true;
-                    // Archive doesn't have is_day or precipitation_probability
-                    const isDayIndex = hourlyVariables.indexOf('is_day');
-                    if (isDayIndex > -1) hourlyVariables.splice(isDayIndex, 1);
-
+                    // Archive uses precipitation instead of probability.
                     const probIndex = hourlyVariables.indexOf('precipitation_probability');
                     if (probIndex > -1) hourlyVariables[probIndex] = 'precipitation';
                 }
@@ -185,7 +193,6 @@ export function useEventWeather(events?: Ref<Event[]>) {
                 const responses = await fetchWeatherApi(url, params);
                 const response = responses[0];
 
-                const utcOffsetSeconds = response.utcOffsetSeconds();
                 const hourly = response.hourly()!;
 
                 const range = (start: number, stop: number, step: number) =>
@@ -202,7 +209,7 @@ export function useEventWeather(events?: Ref<Event[]>) {
                     timezone: response.timezone(),
                     hourly: {
                         time: range(Number(hourly.time()), Number(hourly.timeEnd()), hourly.interval()).map((t) =>
-                            new Date((t + utcOffsetSeconds) * 1000).toISOString()
+                            new Date(t * 1000).toISOString()
                         ),
                         temperature_2m: getVar('temperature_2m')!,
                         weather_code: getVar('weather_code')!,
@@ -273,11 +280,12 @@ export function useEventWeather(events?: Ref<Event[]>) {
 
         const hourlyWindow = [];
         for (let i = 0; i < forecast.hourly.time.length; i++) {
+            const isDay = normalizeIsDay(forecast.hourly.is_day?.[i]);
             hourlyWindow.push({
                 time: forecast.hourly.time[i],
                 temperature: forecast.hourly.temperature_2m[i],
                 weatherCode: forecast.hourly.weather_code[i],
-                isDay: forecast.hourly.is_day?.[i] === 0 ? false : true, // Default to true if missing
+                isDay,
                 apparentTemperature: forecast.hourly.apparent_temperature?.[i] ?? forecast.hourly.temperature_2m[i],
                 windSpeed: forecast.hourly.wind_speed_10m?.[i] ?? 0,
                 humidity: forecast.hourly.relative_humidity_2m?.[i] ?? 0,
@@ -294,10 +302,10 @@ export function useEventWeather(events?: Ref<Event[]>) {
             timestamp: forecast.hourly.time[closestIndex],
             temperature: forecast.hourly.temperature_2m[closestIndex],
             weatherCode: forecast.hourly.weather_code[closestIndex],
-            isDay: forecast.hourly.is_day?.[closestIndex] === 0 ? false : true,
+            isDay: normalizeIsDay(forecast.hourly.is_day?.[closestIndex]),
             summary: mapWeatherCodeToSummary(
                 forecast.hourly.weather_code[closestIndex],
-                forecast.hourly.is_day?.[closestIndex] === 0 ? false : true
+                normalizeIsDay(forecast.hourly.is_day?.[closestIndex])
             ).summary,
             apparentTemperature:
                 forecast.hourly.apparent_temperature?.[closestIndex] ?? forecast.hourly.temperature_2m[closestIndex],
