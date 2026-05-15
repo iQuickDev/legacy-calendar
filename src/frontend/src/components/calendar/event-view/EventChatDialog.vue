@@ -229,7 +229,7 @@ function parseEventId(value: unknown) {
                         <img
                             :src="selectedFilePreviewUrl"
                             alt="Selected preview"
-                            class="max-h-44 w-full object-cover"
+                            class="max-h-44 w-full object-contain"
                         />
                     </div>
                 </div>

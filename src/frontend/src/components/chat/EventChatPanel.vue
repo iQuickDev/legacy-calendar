@@ -124,7 +124,7 @@ void messagesContainer;
 
                                     <div
                                         v-if="row.message.mediaUrl"
-                                        class="overflow-hidden rounded-xl bg-black/25 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
+                                        class="w-fit overflow-hidden rounded-xl bg-black/25 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
                                     >
                                         <template
                                             v-if="
@@ -134,7 +134,7 @@ void messagesContainer;
                                         >
                                             <img
                                                 :src="resolveMediaUrl(row.message.mediaUrl)"
-                                                class="max-h-[340px] w-full object-cover"
+                                                class="block max-h-[340px] max-w-full object-contain"
                                                 :alt="row.message.mediaType || 'chat media'"
                                             />
                                         </template>
@@ -142,7 +142,7 @@ void messagesContainer;
                                             <video
                                                 :src="resolveMediaUrl(row.message.mediaUrl)"
                                                 controls
-                                                class="w-full max-w-full"
+                                                class="block max-w-full"
                                             />
                                         </template>
                                         <template v-else-if="getMediaKind(row.message.mediaType) === 'audio'">
