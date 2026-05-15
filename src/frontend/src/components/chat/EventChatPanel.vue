@@ -9,6 +9,8 @@ import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
 import UserAvatar from '../UserAvatar.vue';
 import { ref, computed } from 'vue';
+import EmojiPicker from 'vue3-emoji-picker';
+import 'vue3-emoji-picker/css';
 
 const chatState = injectEventChatDialogState();
 const {
@@ -91,6 +93,13 @@ const menuItems = computed(() => {
 
     return items;
 });
+
+const onEmojiSelect = (emoji: any) => {
+    if (activeReactionMessageId.value !== null) {
+        onPickEmoji(activeReactionMessageId.value, emoji.i);
+        op.value.hide();
+    }
+};
 </script>
 
 <template>
@@ -302,7 +311,7 @@ const menuItems = computed(() => {
             ref="op"
             :pt="{
                 root: {
-                    class: 'rounded-2xl! border-zinc-800! bg-zinc-950! shadow-2xl!',
+                    class: 'rounded-2xl! border-zinc-800! bg-zinc-950! shadow-2xl! overflow-hidden!',
                     style: {
                         '--p-popover-background': '#09090b',
                         '--p-popover-border-color': '#27272a'
@@ -313,18 +322,27 @@ const menuItems = computed(() => {
                 }
             }"
         >
-            <div class="flex flex-wrap gap-1">
-                <button
-                    v-for="emoji in emojiChoices"
-                    :key="emoji"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl text-lg transition hover:bg-white/10 active:scale-90"
-                    @click="
-                        onPickEmoji(activeReactionMessageId!, emoji);
-                        op.hide();
-                    "
-                >
-                    <span class="font-emoji">{{ emoji }}</span>
-                </button>
+            <div class="flex max-h-[450px] flex-col overflow-hidden">
+                <div class="bg-zinc-900/50 px-3 pt-3 pb-1.5">
+                    <h5 class="custom-emoji-header m-0 p-0">Quick Reactions</h5>
+                </div>
+                <div class="flex flex-wrap gap-1 border-b border-zinc-800 bg-zinc-900/50 px-2 pb-2">
+                    <button
+                        v-for="emoji in emojiChoices"
+                        :key="emoji"
+                        class="flex h-9 w-9 items-center justify-center rounded-xl text-lg transition hover:bg-white/10 active:scale-90"
+                        title="Quick reaction"
+                        @click="
+                            onPickEmoji(activeReactionMessageId!, emoji);
+                            op.hide();
+                        "
+                    >
+                        <span class="font-emoji">{{ emoji }}</span>
+                    </button>
+                </div>
+                <div class="emoji-picker-container p-0">
+                    <EmojiPicker :native="true" theme="dark" :hide-group-names="false" @select="onEmojiSelect" />
+                </div>
             </div>
         </Popover>
     </div>
@@ -334,5 +352,96 @@ const menuItems = computed(() => {
 /* Arrow Border */
 :deep(.p-popover:before) {
     border-color: #27272a !important; /* zinc-800 */
+}
+
+/* Emoji Picker Customization */
+:deep(.v3-emoji-picker) {
+    --v3-bg: #09090b !important;
+    --v3-border-color: transparent !important;
+    --v3-text-color: #f4f4f5 !important;
+    --v3-input-bg: #18181b !important;
+    --v3-input-border-color: #27272a !important;
+    --v3-input-text-color: #f4f4f5 !important;
+    --v3-input-placeholder-color: #71717a !important;
+    --v3-group-h-bg: #09090b !important;
+    --v3-hover-bg: #27272a !important;
+    width: 320px;
+    height: 380px;
+    border-radius: 0;
+    box-shadow: none;
+    font-family: inherit;
+    background-color: #09090b !important;
+}
+
+:deep(.v3-header) {
+    padding: 12px 12px 8px;
+    border-bottom: 0;
+    background-color: #09090b !important;
+}
+
+:deep(.v3-emoji-picker input) {
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+    font-size: 0.875rem !important;
+    border: 1px solid #27272a !important;
+    background-color: #18181b !important;
+    color: #f4f4f5 !important;
+    transition: all 0.2s !important;
+    width: 100% !important;
+}
+
+:deep(.v3-emoji-picker input:focus) {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 1px #3b82f6 !important;
+    outline: none !important;
+}
+
+:deep(.v3-body-inner) {
+    padding: 0 12px !important;
+    background-color: #09090b !important;
+}
+
+:deep(.v3-group-h),
+:deep(.v3-emoji-picker .v3-group h5),
+:deep(.custom-emoji-header) {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #71717a !important; /* zinc-500 */
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
+    background-color: #09090b !important;
+    margin: 0 !important;
+    border: none !important;
+    line-height: 1 !important;
+}
+
+:deep(.custom-emoji-header) {
+    background-color: transparent !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+:deep(.v3-footer) {
+    display: none;
+}
+
+/* Custom Scrollbar */
+:deep(.v3-body-inner::-webkit-scrollbar) {
+    width: 6px;
+}
+
+:deep(.v3-body-inner::-webkit-scrollbar-track) {
+    background: transparent;
+}
+
+:deep(.v3-body-inner::-webkit-scrollbar-thumb) {
+    background: #27272a;
+    border-radius: 10px;
+}
+
+:deep(.v3-body-inner::-webkit-scrollbar-thumb:hover) {
+    background: #3f3f46;
 }
 </style>
