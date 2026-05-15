@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { injectEventChatDialogState } from '../calendar/event-view/chat/useEventChatDialogState';
 import Button from 'primevue/button';
+import ContextMenu from 'primevue/contextmenu';
 import Dialog from 'primevue/dialog';
+import Menu from 'primevue/menu';
+import Popover from 'primevue/popover';
 import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
 import UserAvatar from '../UserAvatar.vue';
+import { ref, computed } from 'vue';
 
 const chatState = injectEventChatDialogState();
 const {
@@ -20,10 +24,7 @@ const {
     scrollToMessage,
     onScroll,
     onPickEmoji,
-    reactionPickerMessageId,
     emojiChoices,
-    closePicker,
-    toggleReactionPicker,
     openEditDialog,
     confirmDelete,
     togglePin,
@@ -34,6 +35,62 @@ const {
 } = chatState;
 
 void messagesContainer;
+
+const menu = ref();
+const contextMenu = ref();
+const op = ref();
+const selectedMessageId = ref<number | null>(null);
+const activeReactionMessageId = ref<number | null>(null);
+
+const onMenuToggle = (event: globalThis.Event, messageId: number) => {
+    selectedMessageId.value = messageId;
+    menu.value.toggle(event);
+};
+
+const onContextMenu = (event: MouseEvent, messageId: number) => {
+    selectedMessageId.value = messageId;
+    contextMenu.value.show(event);
+};
+
+const onReactionToggle = (event: globalThis.Event, messageId: number) => {
+    activeReactionMessageId.value = messageId;
+    op.value.toggle(event);
+};
+
+const menuItems = computed(() => {
+    if (selectedMessageId.value === null) return [];
+    const message = chat.messages.value.find((m) => m.id === selectedMessageId.value);
+    if (!message) return [];
+
+    const items = [];
+
+    if (message.authorId === currentUserId.value) {
+        items.push({
+            label: 'Edit',
+            icon: 'pi pi-pencil',
+            command: () => openEditDialog(message.id)
+        });
+    }
+
+    if (canModerate.value) {
+        items.push({
+            label: message.isPinned ? 'Unpin' : 'Pin',
+            icon: message.isPinned ? 'pi pi-bookmark-fill' : 'pi pi-bookmark',
+            command: () => togglePin(message.id, message.isPinned)
+        });
+    }
+
+    if (message.authorId === currentUserId.value || canModerate.value) {
+        items.push({
+            label: 'Delete',
+            icon: 'pi pi-trash',
+            class: 'text-red-500',
+            command: () => confirmDelete(message.id)
+        });
+    }
+
+    return items;
+});
 </script>
 
 <template>
@@ -104,14 +161,27 @@ void messagesContainer;
                                 :profilePicture="undefined"
                                 class="shrink-0"
                             />
-                            <div class="min-w-0 flex-1">
-                                <div class="mb-1.5 flex flex-wrap items-center gap-2">
+                            <div
+                                class="relative min-w-0 flex-1"
+                                @contextmenu.prevent="onContextMenu($event, row.message.id)"
+                            >
+                                <div class="mb-1.5 flex flex-wrap items-center gap-2 pr-8">
                                     <span class="truncate text-sm font-bold">{{ row.message.authorUsername }}</span>
                                     <span class="text-surface-500 text-[11px]">{{
                                         formatMessageTime(row.message.createdAt)
                                     }}</span>
                                     <Tag v-if="row.message.isPinned" severity="warning" value="Pinned" />
                                     <Tag v-if="row.message.isEdited" severity="info" value="Edited" />
+
+                                    <Button
+                                        v-if="row.message.authorId === currentUserId || canModerate"
+                                        icon="pi pi-ellipsis-h"
+                                        text
+                                        rounded
+                                        severity="secondary"
+                                        class="absolute! -top-1 -right-1 h-8! w-8! transition"
+                                        @click="onMenuToggle($event, row.message.id)"
+                                    />
                                 </div>
 
                                 <div class="space-y-2.5">
@@ -124,7 +194,7 @@ void messagesContainer;
 
                                     <div
                                         v-if="row.message.mediaUrl"
-                                        class="w-fit overflow-hidden rounded-xl bg-black/25 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
+                                        class="mt-2 w-fit overflow-hidden rounded-xl bg-black/25 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
                                     >
                                         <template
                                             v-if="
@@ -163,7 +233,7 @@ void messagesContainer;
                                         </a>
                                     </div>
 
-                                    <div v-if="row.message.reactions.length" class="flex flex-wrap gap-2">
+                                    <div class="flex flex-wrap gap-2">
                                         <button
                                             v-for="reaction in row.message.reactions"
                                             :key="`${row.message.id}-${reaction.emoji}`"
@@ -173,63 +243,13 @@ void messagesContainer;
                                             <span class="font-emoji">{{ reaction.emoji }}</span>
                                             <span>{{ reaction.count }}</span>
                                         </button>
-                                    </div>
 
-                                    <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                        <Button
-                                            text
-                                            size="small"
-                                            severity="secondary"
-                                            icon="pi pi-smile"
-                                            label="React"
-                                            @click="toggleReactionPicker(row.message.id)"
-                                        />
-                                        <Button
-                                            v-if="row.message.authorId === currentUserId"
-                                            text
-                                            size="small"
-                                            severity="secondary"
-                                            icon="pi pi-pencil"
-                                            label="Edit"
-                                            @click="openEditDialog(row.message.id)"
-                                        />
-                                        <Button
-                                            v-if="canModerate"
-                                            text
-                                            size="small"
-                                            severity="secondary"
-                                            :icon="row.message.isPinned ? 'pi pi-bookmark-fill' : 'pi pi-bookmark'"
-                                            :label="row.message.isPinned ? 'Unpin' : 'Pin'"
-                                            @click="togglePin(row.message.id, row.message.isPinned)"
-                                        />
-                                        <Button
-                                            v-if="row.message.authorId === currentUserId || canModerate"
-                                            text
-                                            size="small"
-                                            severity="danger"
-                                            icon="pi pi-trash"
-                                            label="Delete"
-                                            @click="confirmDelete(row.message.id)"
-                                        />
-                                    </div>
-
-                                    <div
-                                        v-if="reactionPickerMessageId === row.message.id"
-                                        class="bg-surface-950/95 flex flex-wrap gap-2 rounded-2xl p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
-                                    >
                                         <button
-                                            v-for="emoji in emojiChoices"
-                                            :key="`${row.message.id}-picker-${emoji}`"
-                                            class="rounded-full px-3 py-1 text-sm transition hover:bg-white/10"
-                                            @click="onPickEmoji(row.message.id, emoji)"
+                                            class="bg-surface-900/95 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs shadow-[0_0_0_1px_rgba(255,255,255,0.04)] transition hover:shadow-[0_0_0_1px_rgba(59,130,246,0.22)]"
+                                            @click="onReactionToggle($event, row.message.id)"
                                         >
-                                            <span class="font-emoji">{{ emoji }}</span>
-                                        </button>
-                                        <button
-                                            class="text-surface-400 ml-auto rounded-full px-3 py-1 text-sm transition hover:bg-white/10"
-                                            @click="closePicker"
-                                        >
-                                            Close
+                                            <i class="pi pi-face-smile text-xs! text-zinc-400"></i>
+                                            <span class="text-surface-400 font-bold">+</span>
                                         </button>
                                     </div>
                                 </div>
@@ -274,5 +294,45 @@ void messagesContainer;
                 </div>
             </div>
         </Dialog>
+
+        <Menu ref="menu" :model="menuItems" :popup="true" />
+        <ContextMenu ref="contextMenu" :model="menuItems" />
+
+        <Popover
+            ref="op"
+            :pt="{
+                root: {
+                    class: 'rounded-2xl! border-zinc-800! bg-zinc-950! shadow-2xl!',
+                    style: {
+                        '--p-popover-background': '#09090b',
+                        '--p-popover-border-color': '#27272a'
+                    }
+                },
+                content: {
+                    class: 'p-0!'
+                }
+            }"
+        >
+            <div class="flex flex-wrap gap-1">
+                <button
+                    v-for="emoji in emojiChoices"
+                    :key="emoji"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl text-lg transition hover:bg-white/10 active:scale-90"
+                    @click="
+                        onPickEmoji(activeReactionMessageId!, emoji);
+                        op.hide();
+                    "
+                >
+                    <span class="font-emoji">{{ emoji }}</span>
+                </button>
+            </div>
+        </Popover>
     </div>
 </template>
+
+<style scoped>
+/* Arrow Border */
+:deep(.p-popover:before) {
+    border-color: #27272a !important; /* zinc-800 */
+}
+</style>
