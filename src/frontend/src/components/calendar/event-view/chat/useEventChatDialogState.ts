@@ -334,7 +334,11 @@ export function useEventChatDialogState(eventRef: EventRef, closeChat: () => voi
         () => chat.loadingHistory.value,
         (isLoading, wasLoading) => {
             if (wasLoading && !isLoading) {
-                chatInitialized.value = true;
+                // Delay setting initialized to true to avoid showing toast for the initial batch of messages
+                // that arrived in the same tick as the loading state change.
+                nextTick(() => {
+                    chatInitialized.value = true;
+                });
             }
         }
     );
@@ -410,21 +414,15 @@ export function useEventChatDialogState(eventRef: EventRef, closeChat: () => voi
     watch(
         () => eventRef.value?.id,
         async () => {
-            await loadMuteState();
-        },
-        { immediate: true }
-    );
-
-    watch(
-        () => eventRef.value?.id,
-        async () => {
+            chatInitialized.value = false;
             draftText.value = '';
             clearSelectedFile();
             editingMessageId.value = null;
             editingDraft.value = '';
             reactionPickerMessageId.value = null;
             await loadMuteState();
-        }
+        },
+        { immediate: true }
     );
 
     onBeforeUnmount(() => {
