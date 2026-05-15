@@ -196,7 +196,7 @@ const onEmojiSelect = (emoji: any) => {
                                 <div class="space-y-2.5">
                                     <div
                                         v-if="row.message.text"
-                                        class="rounded-xl bg-black/10 px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap"
+                                        class="px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap"
                                     >
                                         {{ row.message.text }}
                                     </div>
