@@ -28,7 +28,8 @@ import {
     selectedFeaturesFromEvent,
     totalEventBudget,
     openNavigation,
-    hasLocalChatAccess
+    hasLocalChatAccess,
+    hasLocalAuditLogAccess
 } from '../utils/event';
 
 // Shared state for drag highlighting (Choice A)
@@ -143,6 +144,7 @@ export function useEventView(eventRef: Ref<Event | null>) {
     });
 
     const { canAccessChat } = useChatAccess(eventRef);
+    const canAccessAuditLog = computed(() => hasLocalAuditLogAccess(eventRef.value, currentUser.value?.id));
 
     const availableFeatureIds = computed(() => selectedFeaturesFromEvent(eventRef.value));
 
@@ -251,6 +253,7 @@ export function useEventView(eventRef: Ref<Event | null>) {
         isEnded,
         canAccept,
         canAccessChat,
+        canAccessAuditLog,
         availableFeatureIds,
         eventPrices,
         eventSplitPrices,

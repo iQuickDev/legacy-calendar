@@ -24,6 +24,7 @@ const emit = defineEmits<{
     (e: 'assign-ride', passengerId: number, driverId: number | null): void;
     (e: 'assign-rides-batch', passengerIds: number[], driverId: number | null): void;
     (e: 'open-chat'): void;
+    (e: 'open-audit-log'): void;
 }>();
 
 const { isHost, isEnded, availableFeatureIds } = injectEventView();
@@ -31,7 +32,11 @@ const { isHost, isEnded, availableFeatureIds } = injectEventView();
 
 <template>
     <div class="flex flex-col gap-4 pt-2">
-        <EventHeader :event="event" @open-chat="emit('open-chat')" />
+        <EventHeader
+            :event="event"
+            @open-chat="emit('open-chat')"
+            @open-audit-log="emit('open-audit-log')"
+        />
 
         <Divider class="my-2!" />
 

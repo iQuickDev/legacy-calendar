@@ -13,6 +13,7 @@ import type { CreateEventDto } from '../types/Event';
 const EventDialog = defineAsyncComponent(() => import('../components/calendar/EventDialog.vue'));
 const EventViewDialog = defineAsyncComponent(() => import('../components/calendar/EventViewDialog.vue'));
 const EventChatDialog = defineAsyncComponent(() => import('../components/calendar/event-view/EventChatDialog.vue'));
+const EventAuditLogDialog = defineAsyncComponent(() => import('../components/calendar/event-view/EventAuditLogDialog.vue'));
 const EventEditDialog = defineAsyncComponent(() => import('../components/calendar/EventEditDialog.vue'));
 const DayViewDialog = defineAsyncComponent(() => import('../components/calendar/DayViewDialog.vue'));
 
@@ -75,11 +76,14 @@ const {
     showViewDialog,
     showEditDialog,
     showChatDialog,
+    showAuditLogDialog,
     eventToEdit,
     selectedEvent,
     openViewEvent,
+    openAuditLogEvent,
     handleEditEvent,
-    handleDeleteEvent
+    handleDeleteEvent,
+    navigationError
 } = useEventDialogs(events);
 
 // Day View state
@@ -230,12 +234,16 @@ onBeforeUnmount(() => {
         <EventViewDialog
             v-model:visible="showViewDialog"
             :event="selectedEvent"
+            :navigation-error="navigationError"
             @delete="handleDeleteEvent"
             @edit="handleEditEvent"
+            @open-audit-log="selectedEvent && openAuditLogEvent(selectedEvent)"
         />
 
         <!-- Event Chat Dialog -->
         <EventChatDialog v-model:visible="showChatDialog" :event="selectedEvent" />
+
+        <EventAuditLogDialog v-model:visible="showAuditLogDialog" :event="selectedEvent" />
 
         <!-- Event Edit Dialog -->
         <EventEditDialog

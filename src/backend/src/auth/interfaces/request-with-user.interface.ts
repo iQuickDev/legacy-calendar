@@ -7,4 +7,5 @@ export interface RequestWithUser extends Request {
         username: string;
         isAdmin: boolean;
     };
+    impersonatorUserId?: number | null;
 }

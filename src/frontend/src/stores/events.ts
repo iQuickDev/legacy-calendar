@@ -13,6 +13,7 @@ export const useEventsStore = defineStore('events', () => {
     const events = ref<Event[]>([]);
     const loading = ref(false);
     const error = ref<string | null>(null);
+    const lastErrorStatus = ref<number | null>(null);
     const activeRange = ref<CalendarVisibleRange | null>(null);
     const rangeCache = ref<Record<string, Event[]>>({});
     const upcomingEvents = ref<Event[]>([]);
@@ -42,6 +43,7 @@ export const useEventsStore = defineStore('events', () => {
 
         if (clearError) {
             error.value = null;
+            lastErrorStatus.value = null;
         }
 
         try {
@@ -49,6 +51,7 @@ export const useEventsStore = defineStore('events', () => {
         } catch (err: any) {
             if (logError) {
                 error.value = err.response?.data?.message || errorMessage;
+                lastErrorStatus.value = err.response?.status ?? null;
                 logger.warn(errorMessage, {
                     status: err.response?.status,
                     message: err.response?.data?.message ?? err.message
@@ -115,6 +118,7 @@ export const useEventsStore = defineStore('events', () => {
             visibleLoadSequence.set(rangeKey, requestId);
             activeRange.value = cloneRange(range);
             logger.info('Loading visible calendar range', { rangeKey });
+            lastErrorStatus.value = null;
 
             const cachedEvents = rangeCache.value[rangeKey];
             if (cachedEvents) {
@@ -325,6 +329,7 @@ export const useEventsStore = defineStore('events', () => {
         events,
         loading,
         error,
+        lastErrorStatus,
         upcomingEvents,
         activeRange,
         rangeCache,

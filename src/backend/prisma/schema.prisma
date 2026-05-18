@@ -23,6 +23,8 @@ model User {
   isAdmin                    Boolean          @default(false)
   chatMessages               ChatMessage[]
   chatReactions              ChatReaction[]
+  auditLogEntriesAsActor     AuditLogEntry[]  @relation("AuditLogActor")
+  auditLogEntriesAsImpersonator AuditLogEntry[] @relation("AuditLogImpersonator")
 }
 
 model FcmToken {
@@ -60,12 +62,14 @@ model Event {
   rideAssignments       RideAssignment[]
   chatMessages          ChatMessage[]
   chatMutes             ChatMute[]
+  auditLogEntries       AuditLogEntry[]
 }
 
 model Attendance {
   id            Int           @id @default(autoincrement())
   userId        Int
   eventId       Int
+  createdAt     DateTime      @default(now())
   status        InviteStatus  @default(PENDING)
   wantsAlcohol  Boolean       @default(false)
   wantsFood     Boolean       @default(false)
@@ -154,4 +158,33 @@ model ChatMute {
 
   @@unique([userId, eventId])
   @@index([eventId])
+}
+
+model AuditLogEntry {
+  id             Int        @id @default(autoincrement())
+  eventId        Int
+  actorId        Int
+  impersonatorId  Int?
+  actionType     ActionType
+  payloadDiff    Json
+  createdAt      DateTime   @default(now())
+
+  event          Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  actor          User       @relation("AuditLogActor", fields: [actorId], references: [id])
+  impersonator   User?      @relation("AuditLogImpersonator", fields: [impersonatorId], references: [id])
+
+  @@index([eventId, createdAt])
+}
+
+enum ActionType {
+  EVENT_CREATED
+  EVENT_UPDATED
+  EVENT_DELETED
+  PARTICIPANT_JOINED
+  PARTICIPANT_DECLINED
+  PARTICIPANT_REMOVED
+  PARTICIPANT_UPDATED
+  PARTICIPANT_INVITED
+  RIDE_ASSIGNED
+  RIDE_UNASSIGNED
 }

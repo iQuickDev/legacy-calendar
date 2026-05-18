@@ -11,6 +11,7 @@ import type { AuthLoginDto, ChangePasswordDto } from '../types/Auth';
 import type { CalendarVisibleRange } from '../types/Calendar';
 import type { CreateEventDto, Event, ParticipateDto } from '../types/Event';
 import type { ChatHistoryResponse, ChatMediaUploadResponse } from '../types/Chat';
+import type { AuditLogEntry } from '../types/AuditLog';
 
 // --- API Class ---
 
@@ -210,6 +211,12 @@ class API {
 
     async assignRide(eventId: number, passengerId: number, driverId: number | null): Promise<AxiosResponse<void>> {
         return this.client.post(`/events/${eventId}/assign-ride`, { passengerId, driverId });
+    }
+
+    async getEventAuditLog(eventId: number): Promise<AxiosResponse<AuditLogEntry[]>> {
+        return this.client.get(`/events/${eventId}/audit-log`, {
+            timeout: 30000
+        });
     }
 
     // --- Chat ---

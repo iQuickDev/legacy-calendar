@@ -12,6 +12,7 @@ import { useEventWeather } from '../composables/useEventWeather';
 
 const EventViewDialog = defineAsyncComponent(() => import('../components/calendar/EventViewDialog.vue'));
 const EventChatDialog = defineAsyncComponent(() => import('../components/calendar/event-view/EventChatDialog.vue'));
+const EventAuditLogDialog = defineAsyncComponent(() => import('../components/calendar/event-view/EventAuditLogDialog.vue'));
 const EventEditDialog = defineAsyncComponent(() => import('../components/calendar/EventEditDialog.vue'));
 
 const eventsStore = useEventsStore();
@@ -37,9 +38,11 @@ const {
     showViewDialog,
     showEditDialog,
     showChatDialog,
+    showAuditLogDialog,
     eventToEdit,
     selectedEvent,
     openViewEvent: baseOpenViewEvent,
+    openAuditLogEvent,
     handleEditEvent,
     handleDeleteEvent
 } = useEventDialogs(events, sharedEvent);
@@ -132,9 +135,12 @@ const openViewEvent = (event: Event) => {
             :event="selectedEvent"
             @delete="handleDeleteEvent"
             @edit="handleEditEvent"
+            @open-audit-log="selectedEvent && openAuditLogEvent(selectedEvent)"
         />
 
         <EventChatDialog v-model:visible="showChatDialog" :event="selectedEvent" />
+
+        <EventAuditLogDialog v-model:visible="showAuditLogDialog" :event="selectedEvent" />
 
         <!-- Event Edit Dialog -->
         <EventEditDialog

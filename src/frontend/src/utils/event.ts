@@ -233,3 +233,13 @@ export function hasLocalChatAccess(event: Event | null | undefined, currentUserI
         ) ?? false
     );
 }
+
+export function hasLocalAuditLogAccess(event: Event | null | undefined, currentUserId: number | null | undefined) {
+    if (!event || currentUserId == null) return false;
+
+    if (event.hostId === currentUserId || event.host?.id === currentUserId) {
+        return true;
+    }
+
+    return event.participants?.some((participant) => participant.id === currentUserId) ?? false;
+}

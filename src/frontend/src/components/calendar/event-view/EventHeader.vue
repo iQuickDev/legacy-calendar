@@ -11,11 +11,12 @@ defineProps<{
     event: Event;
 }>();
 
-const { eventHost, eventTotalBudget, isDeadlinePassed, canAccessChat } = injectEventView();
+const { eventHost, eventTotalBudget, isDeadlinePassed, canAccessChat, canAccessAuditLog } = injectEventView();
 const { shareEvent } = useShareEvent();
 
 const emit = defineEmits<{
     (e: 'open-chat'): void;
+    (e: 'open-audit-log'): void;
 }>();
 </script>
 
@@ -41,6 +42,14 @@ const emit = defineEmits<{
                             v-tooltip.left="'Event Chat'"
                             icon="pi pi-comments"
                             @click="emit('open-chat')"
+                        />
+                        <Button
+                            v-if="canAccessAuditLog"
+                            rounded
+                            text
+                            v-tooltip.left="'Audit Log'"
+                            icon="pi pi-list"
+                            @click="emit('open-audit-log')"
                         />
                     </div>
                 </div>

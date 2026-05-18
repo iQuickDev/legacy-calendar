@@ -13,6 +13,7 @@ export function useEventDialogs(events: Ref<Event[]>, externalEvent?: Ref<Event 
     const router = useRouter();
 
     const eventToEdit = ref<Event | null>(null);
+    const navigationError = ref<string | null>(null);
 
     const currentSection = computed(() => getCurrentSection(route.path, route.name));
     const eventPathPrefix = computed(() => (currentSection.value === 'upcoming' ? '/upcoming' : '/event'));
@@ -46,6 +47,21 @@ export function useEventDialogs(events: Ref<Event[]>, externalEvent?: Ref<Event 
         await router.replace({ path: `${eventPathPrefix.value}/${selectedEventId.value}` });
     };
 
+    const closeAuditLogDialog = async () => {
+        if (!selectedEventId.value) {
+            await closeEventState();
+            return;
+        }
+
+        try {
+            navigationError.value = null;
+            await router.push({ path: `${eventPathPrefix.value}/${selectedEventId.value}` });
+        } catch (error) {
+            navigationError.value =
+                error instanceof Error ? error.message : 'Failed to close the audit log panel.';
+        }
+    };
+
     const showViewDialogState = computed({
         get: () => selectedEventId.value !== null,
         set: (visible: boolean) => {
@@ -73,6 +89,15 @@ export function useEventDialogs(events: Ref<Event[]>, externalEvent?: Ref<Event 
         }
     });
 
+    const showAuditLogDialogState = computed({
+        get: () => routeAction.value === 'audit-log' && selectedEventId.value !== null,
+        set: (visible: boolean) => {
+            if (visible) return;
+
+            void closeAuditLogDialog();
+        }
+    });
+
     const openViewEvent = (eventOrId: number | Event) => {
         const eventId = typeof eventOrId === 'number' ? eventOrId : eventOrId.id;
 
@@ -81,6 +106,16 @@ export function useEventDialogs(events: Ref<Event[]>, externalEvent?: Ref<Event 
         }
 
         void router.push({ path: `${eventPathPrefix.value}/${eventId}` });
+    };
+
+    const openAuditLogEvent = (eventOrId: number | Event) => {
+        const eventId = typeof eventOrId === 'number' ? eventOrId : eventOrId.id;
+
+        if (selectedEventId.value === eventId && routeAction.value === 'audit-log') {
+            return;
+        }
+
+        void router.push({ path: `${eventPathPrefix.value}/${eventId}/audit-log` });
     };
 
     const handleEditEvent = (event: Event) => {
@@ -119,6 +154,10 @@ export function useEventDialogs(events: Ref<Event[]>, externalEvent?: Ref<Event 
     watch(
         [selectedEventId, routeAction, selectedEvent],
         ([eventId, action, event]) => {
+            if (action !== 'audit-log') {
+                navigationError.value = null;
+            }
+
             if (eventId === null) {
                 if (externalEvent) {
                     externalEvent.value = null;
@@ -153,6 +192,17 @@ export function useEventDialogs(events: Ref<Event[]>, externalEvent?: Ref<Event 
 
             const loaded = await eventsStore.fetchEventById(eventId);
             if (!loaded) {
+                const status = eventsStore.lastErrorStatus;
+                if (status === 403) {
+                    void router.replace({ name: 'forbidden' });
+                    return;
+                }
+
+                if (status === 404 || routeAction.value === 'audit-log') {
+                    void router.replace({ name: 'not-found' });
+                    return;
+                }
+
                 void closeEventState();
                 return;
             }
@@ -172,11 +222,14 @@ export function useEventDialogs(events: Ref<Event[]>, externalEvent?: Ref<Event 
         showViewDialog: showViewDialogState,
         showEditDialog: showEditDialogState,
         showChatDialog: showChatDialogState,
+        showAuditLogDialog: showAuditLogDialogState,
         eventToEdit,
         selectedEvent,
         openViewEvent,
+        openAuditLogEvent,
         handleEditEvent,
-        handleDeleteEvent
+        handleDeleteEvent,
+        navigationError
     };
 }
 
@@ -190,6 +243,7 @@ function getCurrentSection(path: string, routeName: unknown) {
 
 function getRouteAction(path: string) {
     if (path.endsWith('/chat')) return 'chat';
+    if (path.endsWith('/audit-log')) return 'audit-log';
     if (path.endsWith('/map')) return 'map';
     if (path.endsWith('/edit')) return 'edit';
     return null;

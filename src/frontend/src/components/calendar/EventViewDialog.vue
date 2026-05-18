@@ -17,6 +17,7 @@ import type { ParticipateDto } from '../../types/Event';
 const props = defineProps<{
     visible: boolean;
     event: Event | null;
+    navigationError?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -25,6 +26,7 @@ const emit = defineEmits<{
     (e: 'joined'): void;
     (e: 'refresh'): void;
     (e: 'edit', event: Event): void;
+    (e: 'open-audit-log'): void;
 }>();
 
 const eventsStore = useEventsStore();
@@ -274,7 +276,15 @@ function parseEventId(value: unknown) {
             @assign-ride="assignRide"
             @assign-rides-batch="assignRidesBatch"
             @open-chat="onOpenChat"
+            @open-audit-log="emit('open-audit-log')"
         />
+
+        <div
+            v-if="navigationError"
+            class="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200"
+        >
+            {{ navigationError }}
+        </div>
 
         <template #footer v-if="!isEnded">
             <div class="flex w-full justify-between gap-2 pt-4">

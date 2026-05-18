@@ -1,4 +1,4 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } from '@nestjs/common';
+import { BadRequestException, Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { UsersService } from '../../users/users.service.js';
 import { RequestWithUser } from '../interfaces/request-with-user.interface.js';
@@ -15,40 +15,45 @@ export class ImpersonateInterceptor implements NestInterceptor {
 
         // Only admins can impersonate
         if (impersonateUserId) {
-            if (request.user && request.user.isAdmin) {
-                const userId = parseInt(impersonateUserId as string, 10);
-                if (!isNaN(userId)) {
-                    try {
-                        const user = await this.usersService.findOne(userId);
-                        if (user) {
-                            this.logger.warn('Admin impersonation applied', {
-                                adminUsername: request.user.username,
-                                impersonatedUserId: user.id,
-                                impersonatedUsername: user.username
-                            });
-                            // Switch current user to the impersonated one
-                            request.user = {
-                                userId: user.id,
-                                id: user.id,
-                                username: user.username,
-                                isAdmin: user.isAdmin
-                            };
-                        } else {
-                            this.logger.warn('Impersonation failed: user not found', { userId });
-                        }
-                    } catch (error) {
-                        this.logger.error(
-                            'Error during impersonation',
-                            error instanceof Error ? (error.stack ?? error.message) : String(error)
-                        );
-                        // If user not found, just continue as the original user
-                    }
-                }
-            } else if (request.user) {
-                // Only warn if an authenticated non-admin user is attempting impersonation.
-                // Unauthenticated requests (public endpoints) still receive the header from
-                // the frontend, so we silently ignore those to avoid log spam.
-                this.logger.warn('Impersonation attempt by non-admin user', { username: request.user.username });
+            if (!request.user) {
+                return next.handle();
+            }
+
+            if (!request.user.isAdmin) {
+                this.logger.warn('Impersonation rejected: non-admin user', { username: request.user.username });
+                throw new BadRequestException('Invalid impersonation target');
+            }
+
+            const userId = parseInt(impersonateUserId as string, 10);
+            if (Number.isNaN(userId)) {
+                this.logger.warn('Impersonation rejected: invalid target id', {
+                    adminUsername: request.user.username,
+                    value: impersonateUserId
+                });
+                throw new BadRequestException('Invalid impersonation target');
+            }
+
+            try {
+                const user = await this.usersService.findOne(userId);
+                request.impersonatorUserId = request.user.userId ?? request.user.id ?? null;
+                this.logger.warn('Admin impersonation applied', {
+                    adminUsername: request.user.username,
+                    adminUserId: request.impersonatorUserId,
+                    impersonatedUserId: user.id,
+                    impersonatedUsername: user.username
+                });
+                request.user = {
+                    userId: user.id,
+                    id: user.id,
+                    username: user.username,
+                    isAdmin: user.isAdmin
+                };
+            } catch (error) {
+                this.logger.warn('Impersonation rejected: target user not found', {
+                    adminUsername: request.user.username,
+                    targetUserId: userId
+                });
+                throw new BadRequestException('Invalid impersonation target');
             }
         }
 
